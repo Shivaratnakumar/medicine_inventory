@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 import {
   LayoutDashboard,
   Pill,
@@ -16,12 +17,14 @@ import {
   User,
   LogOut,
   Menu,
-  X
+  X,
+  Package
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { getCartItemCount, openCart } = useCart();
   const location = useLocation();
 
   const mainNavigation = [
@@ -29,6 +32,7 @@ const Layout = ({ children }) => {
     { name: 'Medicines', href: '/medicines', icon: Pill },
     { name: 'Expiry Tracker', href: '/expiry-tracker', icon: Calendar },
     { name: 'Orders', href: '/orders', icon: ShoppingCart },
+    { name: 'Order Tracking', href: '/order-tracking', icon: Package },
     { name: 'Billing', href: '/billing', icon: Receipt },
     { name: 'Payment', href: '/payment', icon: CreditCard },
   ];
@@ -103,6 +107,19 @@ const Layout = ({ children }) => {
               </div>
             </div>
             <div className="ml-4 flex items-center md:ml-6">
+              {/* Shopping Cart */}
+              <button 
+                onClick={openCart}
+                className="relative bg-white p-1 rounded-full text-medical-400 hover:text-medical-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 mr-2"
+              >
+                <ShoppingCart className="h-6 w-6" />
+                {getCartItemCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {getCartItemCount()}
+                  </span>
+                )}
+              </button>
+
               {/* Notifications */}
               <button className="bg-white p-1 rounded-full text-medical-400 hover:text-medical-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                 <Bell className="h-6 w-6" />

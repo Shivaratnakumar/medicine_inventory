@@ -1,11 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
 import Layout from './components/Layout/Layout';
+import CartModal from './components/Cart/CartModal';
 import Login from './pages/Auth/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Medicines from './pages/Medicines/Medicines';
 import Orders from './pages/Orders/Orders';
+import OrderTracking from './pages/OrderTracking/OrderTracking';
 import Billing from './pages/Billing/Billing';
 import Stores from './pages/Stores/Stores';
 import ExpiryTracker from './pages/ExpiryTracker/ExpiryTracker';
@@ -54,47 +57,51 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="App">
-          <Routes>
-            {/* Public Routes */}
-            <Route 
-              path="/login" 
-              element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              } 
-            />
+      <CartProvider>
+        <Router>
+          <div className="App">
+            <Routes>
+              {/* Public Routes */}
+              <Route 
+                path="/login" 
+                element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                } 
+              />
 
-            {/* Protected Routes */}
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/medicines" element={<Medicines />} />
-                      <Route path="/orders" element={<Orders />} />
-                      <Route path="/billing" element={<Billing />} />
-                      <Route path="/stores" element={<Stores />} />
-                      <Route path="/expiry-tracker" element={<ExpiryTracker />} />
-                      <Route path="/alerts" element={<Alerts />} />
-                      <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="/feedback" element={<Feedback />} />
-                      <Route path="/support" element={<Support />} />
-                      <Route path="/payment" element={<Payment />} />
-                    </Routes>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </Router>
+              {/* Protected Routes */}
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/medicines" element={<Medicines />} />
+                        <Route path="/orders" element={<Orders />} />
+                        <Route path="/order-tracking" element={<OrderTracking />} />
+                        <Route path="/billing" element={<Billing />} />
+                        <Route path="/stores" element={<Stores />} />
+                        <Route path="/expiry-tracker" element={<ExpiryTracker />} />
+                        <Route path="/alerts" element={<Alerts />} />
+                        <Route path="/notifications" element={<Notifications />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/feedback" element={<Feedback />} />
+                        <Route path="/support" element={<Support />} />
+                        <Route path="/payment" element={<Payment />} />
+                      </Routes>
+                    </Layout>
+                    <CartModal />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </div>
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }

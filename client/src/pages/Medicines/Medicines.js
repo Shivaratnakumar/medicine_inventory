@@ -9,9 +9,12 @@ import {
   Trash2,
   AlertTriangle,
   Package,
-  X
+  X,
+  ShoppingCart
 } from 'lucide-react';
 import { medicinesAPI } from '../../services/api';
+import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -22,6 +25,9 @@ const Medicines = () => {
   const [editingMedicine, setEditingMedicine] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterExpiry, setFilterExpiry] = useState('all');
+  
+  const { addToCart, isInCart } = useCart();
+  const { user } = useAuth();
 
 
   // Debounce search term
@@ -264,6 +270,27 @@ const Medicines = () => {
                   <div className="mt-2 flex items-center text-xs text-orange-600">
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     Prescription Required
+                  </div>
+                )}
+
+                {/* Add to Cart Button - Only show for non-admin users */}
+                {user?.role !== 'admin' && stockStatus.status !== 'out' && expiryStatus.status !== 'expired' && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => {
+                        addToCart(medicine);
+                        toast.success(`${medicine.name} added to cart!`);
+                      }}
+                      disabled={isInCart(medicine.id)}
+                      className={`w-full flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        isInCart(medicine.id)
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                      }`}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      {isInCart(medicine.id) ? 'In Cart' : 'Add to Cart'}
+                    </button>
                   </div>
                 )}
               </div>

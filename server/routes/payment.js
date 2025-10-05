@@ -10,7 +10,8 @@ const router = express.Router();
 // @access  Private
 router.post('/create-intent', authenticateToken, [
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
-  body('billing_id').isUUID().withMessage('Valid billing ID is required')
+  body('order_id').optional(),
+  body('billing_id').optional()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -22,7 +23,9 @@ router.post('/create-intent', authenticateToken, [
       });
     }
 
-    // In a real implementation, you would integrate with Stripe here
+    const { amount, order_id, billing_id, payment_method = 'card' } = req.body;
+
+    // In a real implementation, you would integrate with Stripe/PayPal here
     // For now, we'll create a mock payment intent
     const paymentIntentId = `pi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -30,7 +33,9 @@ router.post('/create-intent', authenticateToken, [
       success: true,
       data: {
         client_secret: paymentIntentId,
-        payment_intent_id: paymentIntentId
+        payment_intent_id: paymentIntentId,
+        amount: amount,
+        payment_method: payment_method
       }
     });
   } catch (error) {
@@ -116,21 +121,31 @@ router.post('/confirm', authenticateToken, [
       });
     }
 
-    const { payment_intent_id, billing_id } = req.body;
+    const { payment_intent_id, billing_id, order_id, amount, payment_method = 'card' } = req.body;
 
-    // In a real implementation, you would verify the payment with Stripe
+    // In a real implementation, you would verify the payment with Stripe/PayPal
     // For now, we'll simulate a successful payment
+    const paymentData = {
+      amount: amount || 0,
+      payment_method: payment_method,
+      payment_reference: payment_intent_id,
+      stripe_payment_intent_id: payment_intent_id,
+      status: payment_method === 'cash' ? 'pending' : 'paid',
+      processed_at: new Date().toISOString()
+    };
+
+    // Add billing_id if provided
+    if (billing_id) {
+      paymentData.billing_id = billing_id;
+    }
+    // Note: order_id column will be added later
+    // if (order_id) {
+    //   paymentData.order_id = order_id;
+    // }
+
     const { data: payment, error } = await supabaseAdmin
       .from('payments')
-      .insert({
-        billing_id,
-        amount: req.body.amount || 0,
-        payment_method: 'card',
-        payment_reference: payment_intent_id,
-        stripe_payment_intent_id: payment_intent_id,
-        status: 'paid',
-        processed_at: new Date().toISOString()
-      })
+      .insert(paymentData)
       .select()
       .single();
 
@@ -142,15 +157,26 @@ router.post('/confirm', authenticateToken, [
       });
     }
 
-    // Update billing status
+    // Update billing status if billing_id provided
     if (billing_id) {
       await supabaseAdmin
         .from('billing')
         .update({
-          payment_status: 'paid',
-          paid_at: new Date().toISOString()
+          payment_status: payment_method === 'cash' ? 'pending' : 'paid',
+          paid_at: payment_method === 'cash' ? null : new Date().toISOString()
         })
         .eq('id', billing_id);
+    }
+
+    // Update order status if order_id provided
+    if (order_id) {
+      await supabaseAdmin
+        .from('orders')
+        .update({
+          payment_status: payment_method === 'cash' ? 'pending' : 'paid',
+          status: 'confirmed'
+        })
+        .eq('id', order_id);
     }
 
     res.json({

@@ -235,6 +235,29 @@ export const paymentAPI = {
     const response = await api.get('/payments/history', { params });
     return response.data; // Return the actual data, not the axios response
   },
+  processOrderPayment: async (orderData) => {
+    try {
+      // Create payment intent
+      const paymentIntentResponse = await api.post('/payments/create-intent', {
+        amount: orderData.total_amount,
+        order_id: orderData.order_id,
+        payment_method: orderData.payment_method
+      });
+
+      // Confirm payment
+      const confirmResponse = await api.post('/payments/confirm', {
+        payment_intent_id: paymentIntentResponse.data.data.payment_intent_id,
+        order_id: orderData.order_id,
+        amount: orderData.total_amount,
+        payment_method: orderData.payment_method
+      });
+
+      return confirmResponse.data;
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      throw error;
+    }
+  },
 };
 
 // Profile API
