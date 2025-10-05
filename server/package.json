@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest"
+    "test": "jest",
+    "monitor": "node monitor.js",
+    "managed": "node process-manager.js",
+    "health": "curl http://localhost:5000/health"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.4",

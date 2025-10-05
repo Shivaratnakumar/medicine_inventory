@@ -75,7 +75,7 @@ const Dashboard = () => {
       change: '+12%',
       changeType: 'positive',
       icon: Package,
-      color: 'bg-blue-500',
+      color: 'bg-gradient-to-br from-primary-500 to-primary-600',
     },
     {
       name: 'Total Orders',
@@ -83,7 +83,7 @@ const Dashboard = () => {
       change: '+8%',
       changeType: 'positive',
       icon: ShoppingCart,
-      color: 'bg-green-500',
+      color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
     },
     {
       name: 'Total Revenue',
@@ -91,7 +91,7 @@ const Dashboard = () => {
       change: '+15%',
       changeType: 'positive',
       icon: DollarSign,
-      color: 'bg-yellow-500',
+      color: 'bg-gradient-to-br from-teal-500 to-teal-600',
     },
     {
       name: 'Low Stock Items',
@@ -99,7 +99,7 @@ const Dashboard = () => {
       change: '-3%',
       changeType: 'negative',
       icon: AlertTriangle,
-      color: 'bg-red-500',
+      color: 'bg-gradient-to-br from-danger-500 to-danger-600',
     },
     {
       name: 'Expiring Soon',
@@ -107,7 +107,7 @@ const Dashboard = () => {
       change: '+5%',
       changeType: 'negative',
       icon: Calendar,
-      color: 'bg-orange-500',
+      color: 'bg-gradient-to-br from-warning-500 to-warning-600',
     },
     {
       name: 'Active Stores',
@@ -115,7 +115,7 @@ const Dashboard = () => {
       change: '+2%',
       changeType: 'positive',
       icon: Store,
-      color: 'bg-purple-500',
+      color: 'bg-gradient-to-br from-medical-500 to-medical-600',
     },
   ];
 
@@ -138,10 +138,10 @@ const Dashboard = () => {
       {/* Header */}
       <div className="md:flex md:items-center md:justify-between">
         <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+          <h2 className="text-2xl font-bold leading-7 text-medical-900 sm:text-3xl sm:truncate">
             Dashboard
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-medical-600">
             Welcome back! Here's what's happening with your medicine inventory.
           </p>
         </div>
@@ -175,15 +175,15 @@ const Dashboard = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-medical-500 truncate">
                         {stat.name}
                       </dt>
                       <dd className="flex items-baseline">
-                        <div className="text-2xl font-semibold text-gray-900">
+                        <div className="text-2xl font-semibold text-medical-900">
                           {stat.value}
                         </div>
                         <div className={`ml-2 flex items-baseline text-sm font-semibold ${
-                          stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
+                          stat.changeType === 'positive' ? 'text-emerald-600' : 'text-danger-600'
                         }`}>
                           {stat.changeType === 'positive' ? (
                             <TrendingUp className="self-center flex-shrink-0 h-4 w-4" />
@@ -210,8 +210,8 @@ const Dashboard = () => {
         {/* Sales Chart */}
         <div className="card">
           <div className="card-header">
-            <h3 className="text-lg font-medium text-gray-900">Sales Overview</h3>
-            <p className="text-sm text-gray-500">Daily sales and orders for the past week</p>
+            <h3 className="text-lg font-medium text-medical-900">Sales Overview</h3>
+            <p className="text-sm text-medical-600">Daily sales and orders for the past week</p>
           </div>
           <div className="card-content">
             <div className="h-80">
@@ -241,7 +241,7 @@ const Dashboard = () => {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="flex items-center justify-center h-full text-medical-500">
                   No sales data available
                 </div>
               )}
@@ -252,8 +252,8 @@ const Dashboard = () => {
         {/* Category Distribution */}
         <div className="card">
           <div className="card-header">
-            <h3 className="text-lg font-medium text-gray-900">Medicine Categories</h3>
-            <p className="text-sm text-gray-500">Distribution by category</p>
+            <h3 className="text-lg font-medium text-medical-900">Medicine Categories</h3>
+            <p className="text-sm text-medical-600">Distribution by category</p>
           </div>
           <div className="card-content">
             <div className="h-80">
@@ -278,7 +278,7 @@ const Dashboard = () => {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="flex items-center justify-center h-full text-medical-500">
                   No category data available
                 </div>
               )}
@@ -290,8 +290,8 @@ const Dashboard = () => {
       {/* Expiry Tracking */}
       <div className="card">
         <div className="card-header">
-          <h3 className="text-lg font-medium text-gray-900">Expiry Tracking</h3>
-          <p className="text-sm text-gray-500">Medicines expiring in different time periods</p>
+          <h3 className="text-lg font-medium text-medical-900">Expiry Tracking</h3>
+          <p className="text-sm text-medical-600">Medicines expiring in different time periods</p>
         </div>
         <div className="card-content">
           <div className="h-80">
@@ -306,7 +306,7 @@ const Dashboard = () => {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="flex items-center justify-center h-full text-medical-500">
                 No expiry data available
               </div>
             )}
@@ -318,24 +318,24 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <div className="card-header">
-            <h3 className="text-lg font-medium text-gray-900">Recent Orders</h3>
+            <h3 className="text-lg font-medium text-medical-900">Recent Orders</h3>
           </div>
           <div className="card-content">
             <div className="space-y-4">
               {dashboardData?.data?.data?.recentOrders?.length > 0 ? (
                 dashboardData.data.data.recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-b-0">
+                  <div key={order.id} className="flex items-center justify-between py-2 border-b border-medical-200 last:border-b-0">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{order.customer_name}</p>
-                      <p className="text-sm text-gray-500">Order #{order.order_number}</p>
+                      <p className="text-sm font-medium text-medical-900">{order.customer_name}</p>
+                      <p className="text-sm text-medical-500">Order #{order.order_number}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">${order.total_amount}</p>
+                      <p className="text-sm font-medium text-medical-900">${order.total_amount}</p>
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
+                        order.status === 'delivered' ? 'bg-emerald-100 text-emerald-800' :
+                        order.status === 'pending' ? 'bg-warning-100 text-warning-800' :
+                        order.status === 'shipped' ? 'bg-primary-100 text-primary-800' :
+                        'bg-medical-100 text-medical-800'
                       }`}>
                         {order.status}
                       </span>
@@ -343,7 +343,7 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500 text-center py-4">No recent orders found</p>
+                <p className="text-sm text-medical-500 text-center py-4">No recent orders found</p>
               )}
             </div>
           </div>
@@ -351,19 +351,19 @@ const Dashboard = () => {
 
         <div className="card">
           <div className="card-header">
-            <h3 className="text-lg font-medium text-gray-900">Low Stock Alerts</h3>
+            <h3 className="text-lg font-medium text-medical-900">Low Stock Alerts</h3>
           </div>
           <div className="card-content">
             <div className="space-y-4">
               {dashboardData?.data?.data?.lowStockMedicines?.length > 0 ? (
                 dashboardData.data.data.lowStockMedicines.map((medicine) => (
-                  <div key={medicine.id} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-b-0">
+                  <div key={medicine.id} className="flex items-center justify-between py-2 border-b border-medical-200 last:border-b-0">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{medicine.name}</p>
-                      <p className="text-sm text-gray-500">Min: {medicine.minimum_stock_level} units</p>
+                      <p className="text-sm font-medium text-medical-900">{medicine.name}</p>
+                      <p className="text-sm text-medical-500">Min: {medicine.minimum_stock_level} units</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-red-600">{medicine.quantity_in_stock} left</p>
+                      <p className="text-sm font-medium text-danger-600">{medicine.quantity_in_stock} left</p>
                       <button className="text-xs text-primary-600 hover:text-primary-500">
                         Restock
                       </button>
@@ -371,7 +371,7 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500 text-center py-4">No low stock items found</p>
+                <p className="text-sm text-medical-500 text-center py-4">No low stock items found</p>
               )}
             </div>
           </div>

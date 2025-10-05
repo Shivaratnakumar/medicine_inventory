@@ -24,14 +24,40 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle auth errors
+// Response interceptor to handle auth errors and retry logic
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // Handle 401 errors
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Only redirect if not already on login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+      return Promise.reject(error);
     }
+    
+    // Handle 503 errors (service unavailable) with retry
+    if (error.response?.status === 503 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      // Wait and retry once
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return api(originalRequest);
+    }
+    
+    // Handle network errors with retry
+    if (!error.response && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      // Wait and retry once
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return api(originalRequest);
+    }
+    
     return Promise.reject(error);
   }
 );
