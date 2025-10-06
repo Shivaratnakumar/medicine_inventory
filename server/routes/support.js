@@ -12,16 +12,34 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const { search, status, page = 1, limit = 20 } = req.query;
     
-    console.log('🔍 Support API called with user:', req.user.id);
+    console.log('🚨🚨🚨 SUPPORT API CALLED 🚨🚨🚨');
+    console.log('🔍 Support API called with user:', req.user.id, 'role:', req.user.role);
     console.log('🔍 Query params:', { search, status, page, limit });
 
-    let query = supabaseAdmin
-      .from('support_tickets')
-      .select(`
-        *,
-        users!support_tickets_user_id_fkey(first_name, last_name)
-      `)
-      .order('created_at', { ascending: false });
+    // Apply role-based filtering first
+    let query;
+    if (req.user.role !== 'admin') {
+      console.log('🔍 Non-admin user - filtering tickets for user_id:', req.user.id);
+      console.log('🔍 User role:', req.user.role);
+      query = supabaseAdmin
+        .from('support_tickets')
+        .select(`
+          *,
+          users!support_tickets_user_id_fkey(first_name, last_name)
+        `)
+        .eq('user_id', req.user.id)
+        .order('created_at', { ascending: false });
+    } else {
+      console.log('🔍 Admin user - showing all tickets');
+      console.log('🔍 Admin role:', req.user.role);
+      query = supabaseAdmin
+        .from('support_tickets')
+        .select(`
+          *,
+          users!support_tickets_user_id_fkey(first_name, last_name)
+        `)
+        .order('created_at', { ascending: false });
+    }
 
     // Apply search filter
     if (search) {
@@ -139,14 +157,21 @@ router.post('/', authenticateToken, [
 // @access  Private
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const { data: ticket, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('support_tickets')
       .select(`
         *,
         users!support_tickets_user_id_fkey(first_name, last_name)
       `)
-      .eq('id', req.params.id)
-      .single();
+      .eq('id', req.params.id);
+
+    // Apply role-based filtering
+    // Admin users can see all tickets, non-admin users can only see their own tickets
+    if (req.user.role !== 'admin') {
+      query = query.eq('user_id', req.user.id);
+    }
+
+    const { data: ticket, error } = await query.single();
 
     if (error) {
       console.error('Error fetching support ticket:', error);
@@ -190,6 +215,26 @@ router.put('/:id', authenticateToken, [
         success: false,
         message: 'Validation failed',
         errors: errors.array()
+      });
+    }
+
+    // First check if the ticket exists and user has permission to update it
+    let checkQuery = supabaseAdmin
+      .from('support_tickets')
+      .select('id, user_id')
+      .eq('id', req.params.id);
+
+    // Apply role-based filtering
+    if (req.user.role !== 'admin') {
+      checkQuery = checkQuery.eq('user_id', req.user.id);
+    }
+
+    const { data: existingTicket, error: checkError } = await checkQuery.single();
+
+    if (checkError || !existingTicket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Support ticket not found or access denied'
       });
     }
 
@@ -238,6 +283,26 @@ router.patch('/:id/status', authenticateToken, [
       });
     }
 
+    // First check if the ticket exists and user has permission to update it
+    let checkQuery = supabaseAdmin
+      .from('support_tickets')
+      .select('id, user_id')
+      .eq('id', req.params.id);
+
+    // Apply role-based filtering
+    if (req.user.role !== 'admin') {
+      checkQuery = checkQuery.eq('user_id', req.user.id);
+    }
+
+    const { data: existingTicket, error: checkError } = await checkQuery.single();
+
+    if (checkError || !existingTicket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Support ticket not found or access denied'
+      });
+    }
+
     const { data: ticket, error } = await supabaseAdmin
       .from('support_tickets')
       .update({ 
@@ -275,6 +340,26 @@ router.patch('/:id/status', authenticateToken, [
 // @access  Private
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
+    // First check if the ticket exists and user has permission to delete it
+    let checkQuery = supabaseAdmin
+      .from('support_tickets')
+      .select('id, user_id')
+      .eq('id', req.params.id);
+
+    // Apply role-based filtering
+    if (req.user.role !== 'admin') {
+      checkQuery = checkQuery.eq('user_id', req.user.id);
+    }
+
+    const { data: existingTicket, error: checkError } = await checkQuery.single();
+
+    if (checkError || !existingTicket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Support ticket not found or access denied'
+      });
+    }
+
     const { error } = await supabaseAdmin
       .from('support_tickets')
       .delete()

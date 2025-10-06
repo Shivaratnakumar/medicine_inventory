@@ -12,9 +12,12 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  X
+  X,
+  Shield,
+  UserCheck
 } from 'lucide-react';
 import { supportAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -25,6 +28,7 @@ const Support = () => {
   const [selectedTicket, setSelectedTicket] = useState(null);
 
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Fetch support tickets
   const { data: ticketsResponse, isLoading, error } = useQuery(
@@ -108,9 +112,25 @@ const Support = () => {
       {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Support Tickets</h1>
+          <div className="flex items-center space-x-3">
+            <h1 className="text-2xl font-bold text-gray-900">Support Tickets</h1>
+            {user?.role === 'admin' ? (
+              <div className="flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                <Shield className="h-3 w-3 mr-1" />
+                Admin View
+              </div>
+            ) : (
+              <div className="flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                <UserCheck className="h-3 w-3 mr-1" />
+                My Tickets
+              </div>
+            )}
+          </div>
           <p className="mt-2 text-sm text-gray-700">
-            Manage customer support requests and tickets
+            {user?.role === 'admin' 
+              ? 'Manage all customer support requests and tickets' 
+              : 'View and manage your support tickets'
+            }
           </p>
         </div>
         <div className="mt-4 sm:mt-0">
@@ -329,8 +349,20 @@ const Support = () => {
             <HeadphonesIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No tickets found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              No tickets match your current filter.
+              {user?.role === 'admin' 
+                ? 'No tickets match your current filter.' 
+                : 'You haven\'t created any support tickets yet.'
+              }
             </p>
+            {user?.role !== 'admin' && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="mt-4 btn btn-primary"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Ticket
+              </button>
+            )}
           </div>
         )}
       </div>
