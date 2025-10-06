@@ -28,6 +28,9 @@ const Medicines = () => {
   
   const { addToCart, isInCart } = useCart();
   const { user } = useAuth();
+  
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
 
 
   // Debounce search term
@@ -122,15 +125,17 @@ const Medicines = () => {
             Manage your medicine inventory
           </p>
         </div>
-        <div className="mt-4 sm:mt-0">
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn btn-primary"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Medicine
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="mt-4 sm:mt-0">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn btn-primary"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Medicine
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filters and Search */}
@@ -213,20 +218,22 @@ const Medicines = () => {
                       {medicine.description}
                     </p>
                   </div>
-                  <div className="flex space-x-1 ml-2">
-                    <button
-                      onClick={() => setEditingMedicine(medicine)}
-                      className="p-1 text-gray-400 hover:text-blue-600"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(medicine.id)}
-                      className="p-1 text-gray-400 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex space-x-1 ml-2">
+                      <button
+                        onClick={() => setEditingMedicine(medicine)}
+                        className="p-1 text-gray-400 hover:text-blue-600"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(medicine.id)}
+                        className="p-1 text-gray-400 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-4 space-y-2">

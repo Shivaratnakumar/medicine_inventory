@@ -5,18 +5,29 @@ const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
 // @route   GET /api/orders-direct
-// @desc    Get all orders using Supabase client
+// @desc    Get orders using Supabase client (role-based filtering)
 // @access  Private
 router.get('/orders-direct', authenticateToken, async (req, res) => {
   try {
     const { status, search, page = 1, limit = 20 } = req.query;
-    console.log('🔍 Using Supabase client to fetch orders...', { status, search, page, limit });
+    const userRole = req.user.role;
+    const userId = req.user.id;
+    
+    console.log('🔍 Using Supabase client to fetch orders...', { 
+      status, search, page, limit, userRole, userId 
+    });
     
     // Build query with filters
     let query = supabaseAdmin
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false });
+    
+    // Apply role-based filtering
+    if (userRole !== 'admin') {
+      // Non-admin users can only see their own orders
+      query = query.eq('user_id', userId);
+    }
     
     // Apply status filter
     if (status && status !== 'all') {
@@ -100,6 +111,11 @@ router.get('/orders-direct', authenticateToken, async (req, res) => {
     let countQuery = supabaseAdmin
       .from('orders')
       .select('*', { count: 'exact', head: true });
+    
+    // Apply role-based filtering to count query as well
+    if (userRole !== 'admin') {
+      countQuery = countQuery.eq('user_id', userId);
+    }
     
     if (status && status !== 'all') {
       countQuery = countQuery.eq('status', status);
@@ -301,6 +317,134 @@ router.post('/orders-direct', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating order',
+      error: error.message
+    });
+  }
+});
+
+// @route   DELETE /api/orders-direct/:id
+// @desc    Delete order (admin only)
+// @access  Private (Admin)
+router.delete('/orders-direct/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user.role;
+    
+    // Only admin users can delete orders
+    if (userRole !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only administrators can delete orders.'
+      });
+    }
+    
+    console.log('🗑️ Admin deleting order:', id);
+    
+    // First, get the order to check if it exists and get order items
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        order_items(
+          id,
+          medicine_id,
+          quantity
+        )
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (orderError || !order) {
+      console.error('❌ Order not found:', orderError);
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+    
+    // Restore stock for all items in the order
+    console.log('📦 Restoring stock for order items...');
+    for (const item of order.order_items) {
+      try {
+        // Get current stock
+        const { data: currentMedicine, error: getError } = await supabaseAdmin
+          .from('medicines')
+          .select('quantity_in_stock')
+          .eq('id', item.medicine_id)
+          .single();
+        
+        if (getError) {
+          console.error('❌ Error getting current stock for medicine:', item.medicine_id, getError);
+          continue;
+        }
+        
+        // Restore stock
+        const newStock = currentMedicine.quantity_in_stock + item.quantity;
+        
+        const { error: stockError } = await supabaseAdmin
+          .from('medicines')
+          .update({
+            quantity_in_stock: newStock
+          })
+          .eq('id', item.medicine_id);
+        
+        if (stockError) {
+          console.error('❌ Error restoring stock for medicine:', item.medicine_id, stockError);
+        } else {
+          console.log('✅ Stock restored for medicine:', item.medicine_id, '(+' + item.quantity + ')');
+        }
+      } catch (stockError) {
+        console.error('❌ Error processing stock restoration for medicine:', item.medicine_id, stockError);
+      }
+    }
+    
+    // Delete order items first (due to foreign key constraint)
+    const { error: itemsDeleteError } = await supabaseAdmin
+      .from('order_items')
+      .delete()
+      .eq('order_id', id);
+    
+    if (itemsDeleteError) {
+      console.error('❌ Error deleting order items:', itemsDeleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Error deleting order items',
+        error: itemsDeleteError.message
+      });
+    }
+    
+    // Delete the order
+    const { error: deleteError } = await supabaseAdmin
+      .from('orders')
+      .delete()
+      .eq('id', id);
+    
+    if (deleteError) {
+      console.error('❌ Error deleting order:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Error deleting order',
+        error: deleteError.message
+      });
+    }
+    
+    console.log('✅ Order deleted successfully:', id);
+    
+    res.json({
+      success: true,
+      message: 'Order deleted successfully',
+      data: {
+        id: id,
+        order_number: order.order_number,
+        customer_name: order.customer_name
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Order deletion error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting order',
       error: error.message
     });
   }

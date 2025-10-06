@@ -12,9 +12,14 @@ import {
   Calendar,
   DollarSign,
   Package,
-  X
+  X,
+  Shield,
+  UserCheck,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { ordersAPI, medicinesAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -23,17 +28,25 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderToDelete, setOrderToDelete] = useState(null);
 
   const queryClient = useQueryClient();
+  const { user, loading: userLoading } = useAuth();
+
+  // Force refresh orders data
+  const refreshOrders = () => {
+    queryClient.invalidateQueries(['orders', user?.id, searchTerm, statusFilter]);
+  };
 
   // Fetch orders with retry and fallback
   const { data: ordersResponse, isLoading, error } = useQuery(
-    ['orders', searchTerm, statusFilter],
+    ['orders', user?.id, searchTerm, statusFilter],
     () => ordersAPI.getAll({
       search: searchTerm,
       status: statusFilter !== 'all' ? statusFilter : undefined
     }),
     {
+      enabled: !userLoading && !!user, // Only run query when user is loaded
       retry: 1,
       retryDelay: 2000,
       staleTime: 5 * 60 * 1000, // 5 minutes
@@ -49,10 +62,16 @@ const Orders = () => {
   );
 
   console.log('🔍 Orders Debug Info:');
+  console.log('- User Loading:', userLoading);
+  console.log('- User:', user);
+  console.log('- User ID:', user?.id);
+  console.log('- User Role:', user?.role);
+  console.log('- Query Enabled:', !userLoading && !!user);
   console.log('- ordersResponse:', ordersResponse);
   console.log('- isLoading:', isLoading);
   console.log('- error:', error);
   console.log('- orders:', ordersResponse?.data || []);
+  console.log('- orders count:', ordersResponse?.data?.length || 0);
 
   // Use API data only - no mock data to avoid UUID conflicts
   const orders = ordersResponse?.data || [];
@@ -85,6 +104,21 @@ const Orders = () => {
     }
   );
 
+  // Delete order mutation
+  const deleteOrderMutation = useMutation(
+    (id) => ordersAPI.delete(id),
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries('orders');
+        setOrderToDelete(null);
+        toast.success(`Order ${data.data?.order_number || ''} deleted successfully`);
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to delete order');
+      }
+    }
+  );
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
@@ -101,7 +135,17 @@ const Orders = () => {
     updateStatusMutation.mutate({ id: orderId, status: newStatus });
   };
 
-  if (isLoading) {
+  const handleDeleteOrder = (order) => {
+    setOrderToDelete(order);
+  };
+
+  const confirmDeleteOrder = () => {
+    if (orderToDelete) {
+      deleteOrderMutation.mutate(orderToDelete.id);
+    }
+  };
+
+  if (userLoading || isLoading) {
     return <LoadingSpinner />;
   }
 
@@ -126,12 +170,37 @@ const Orders = () => {
       {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
+          <div className="flex items-center space-x-2">
+            <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
+            {user?.role === 'admin' ? (
+              <div className="flex items-center space-x-1 text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                <Shield className="h-4 w-4" />
+                <span>Admin View</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1 text-sm text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <UserCheck className="h-4 w-4" />
+                <span>My Orders</span>
+              </div>
+            )}
+          </div>
           <p className="mt-2 text-sm text-gray-700">
-            Manage customer orders and track order status
+            {user?.role === 'admin' 
+              ? 'Manage all customer orders and track order status'
+              : 'View and manage your orders'
+            }
           </p>
         </div>
-        <div className="mt-4 sm:mt-0">
+        <div className="mt-4 sm:mt-0 flex space-x-2">
+          <button
+            onClick={() => {
+              queryClient.clear();
+              window.location.reload();
+            }}
+            className="btn btn-outline text-sm"
+          >
+            🔄 Clear Cache & Refresh
+          </button>
           <button
             onClick={() => setShowAddModal(true)}
             className="btn btn-primary"
@@ -141,6 +210,7 @@ const Orders = () => {
           </button>
         </div>
       </div>
+
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow">
@@ -225,27 +295,50 @@ const Orders = () => {
                     {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                   </span>
                   <div className="flex space-x-2">
-                    <select
-                      value={order.status}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                      className="input text-sm py-1 px-2 min-w-[120px]"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="processing">Processing</option>
-                      <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                    {user?.role === 'admin' ? (
+                      <div className="flex items-center space-x-1">
+                        <Shield className="h-3 w-3 text-blue-500" title="Admin control" />
+                        <select
+                          value={order.status}
+                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                          className="input text-sm py-1 px-2 min-w-[120px]"
+                          title="Admin: Change order status"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="processing">Processing</option>
+                          <option value="shipped">Shipped</option>
+                          <option value="delivered">Delivered</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div 
+                        className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded min-w-[120px] text-center"
+                        title="Only admins can change order status"
+                      >
+                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      </div>
+                    )}
                     <button
                       onClick={() => setSelectedOrder(order)}
                       className="p-1 text-gray-400 hover:text-blue-600"
+                      title="View order details"
                     >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button className="p-1 text-gray-400 hover:text-gray-600">
+                    <button className="p-1 text-gray-400 hover:text-gray-600" title="Edit order">
                       <Edit className="h-4 w-4" />
                     </button>
+                    {user?.role === 'admin' && (
+                      <button
+                        onClick={() => handleDeleteOrder(order)}
+                        className="p-1 text-gray-400 hover:text-red-600"
+                        title="Delete order"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -258,7 +351,10 @@ const Orders = () => {
             <ShoppingCart className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No orders found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by creating a new order.
+              {user?.role === 'admin' 
+                ? 'No orders have been placed yet. Orders will appear here once customers start placing them.'
+                : 'You haven\'t placed any orders yet. Get started by creating a new order.'
+              }
             </p>
             <div className="mt-6">
               <button
@@ -292,6 +388,65 @@ const Orders = () => {
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {orderToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Delete Order</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-sm text-gray-700 mb-2">
+                Are you sure you want to delete this order?
+              </p>
+              <div className="bg-gray-50 p-3 rounded-md">
+                <p className="font-medium text-gray-900">Order #{orderToDelete.order_number}</p>
+                <p className="text-sm text-gray-600">Customer: {orderToDelete.customer_name}</p>
+                <p className="text-sm text-gray-600">Total: ${orderToDelete.total_amount}</p>
+                <p className="text-sm text-gray-600">Items: {orderToDelete.order_items?.length || 0}</p>
+              </div>
+              <p className="text-xs text-amber-600 mt-2">
+                ⚠️ This will restore the medicine stock and permanently delete the order.
+              </p>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setOrderToDelete(null)}
+                className="flex-1 btn btn-outline"
+                disabled={deleteOrderMutation.isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteOrder}
+                className="flex-1 btn btn-danger"
+                disabled={deleteOrderMutation.isLoading}
+              >
+                {deleteOrderMutation.isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Order
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

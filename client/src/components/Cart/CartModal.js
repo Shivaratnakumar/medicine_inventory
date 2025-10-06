@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQueryClient } from 'react-query';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { ordersAPI, paymentAPI } from '../../services/api';
@@ -29,6 +30,7 @@ const CartModal = () => {
   } = useCart();
 
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMode, setPaymentMode] = useState('cash');
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -101,6 +103,10 @@ const CartModal = () => {
 
         setOrderSuccess(true);
         clearCart();
+        
+        // Invalidate orders query to refresh the orders page
+        queryClient.invalidateQueries(['orders']);
+        
         toast.success('Order placed successfully!');
       } else {
         throw new Error(orderResponse.message || 'Failed to create order');

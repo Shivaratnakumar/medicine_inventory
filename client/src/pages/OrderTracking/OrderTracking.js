@@ -23,13 +23,13 @@ const OrderTracking = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const { user } = useAuth();
 
-  // Fetch user's orders
+  // Fetch user's orders (OrderTracking always shows only user's orders)
   const { data: ordersResponse, isLoading, error, refetch } = useQuery(
-    ['user-orders', searchTerm, statusFilter],
+    ['user-orders', user?.id, searchTerm, statusFilter],
     () => ordersAPI.getAll({
       search: searchTerm,
-      status: statusFilter !== 'all' ? statusFilter : undefined,
-      user_id: user?.id
+      status: statusFilter !== 'all' ? statusFilter : undefined
+      // Note: user_id filtering is now handled by the backend based on user role
     }),
     {
       enabled: !!user,
@@ -119,7 +119,7 @@ const OrderTracking = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Order Tracking</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Track your medicine orders and delivery status
+            Track the status of your personal orders and view order details
           </p>
         </div>
       </div>

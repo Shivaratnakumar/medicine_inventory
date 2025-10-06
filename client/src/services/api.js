@@ -143,7 +143,7 @@ export const ordersAPI = {
     return response.data;
   },
   delete: async (id) => {
-    const response = await api.delete(`/orders/${id}`);
+    const response = await api.delete(`/orders-direct/${id}`);
     return response.data;
   },
   updateStatus: async (id, status) => {

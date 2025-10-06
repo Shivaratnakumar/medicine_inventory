@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useQueryClient } from 'react-query';
 import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
@@ -14,6 +15,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -25,7 +27,14 @@ export const AuthProvider = ({ children }) => {
         while (retries > 0) {
           try {
             const response = await authAPI.verifyToken();
-            setUser(response.data.user);
+            const newUser = response.data.user;
+            setUser(prevUser => {
+              // Clear cache if user changes during session
+              if (prevUser && prevUser.id !== newUser.id) {
+                queryClient.clear();
+              }
+              return newUser;
+            });
             return;
           } catch (error) {
             retries--;
@@ -70,6 +79,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       setUser(user);
       
+      // Clear cache when user logs in to prevent data leakage
+      queryClient.clear();
+      
       return { success: true };
     } catch (error) {
       return { 
@@ -82,10 +94,19 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
+    // Clear all cached data when user logs out
+    queryClient.clear();
   };
 
   const updateUser = (userData) => {
-    setUser(prev => ({ ...prev, ...userData }));
+    setUser(prev => {
+      const newUser = { ...prev, ...userData };
+      // Clear cache if user role changes to prevent data leakage
+      if (prev && prev.role !== newUser.role) {
+        queryClient.clear();
+      }
+      return newUser;
+    });
   };
 
   const value = {

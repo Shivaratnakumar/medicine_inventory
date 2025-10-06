@@ -1,16 +1,18 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { supabaseAdmin } = require('../config/supabase');
-const { authenticateToken, requireManager } = require('../middleware/auth');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
 // @route   GET /api/orders
-// @desc    Get all orders
+// @desc    Get orders (role-based filtering)
 // @access  Private
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { status, page = 1, limit = 20, search } = req.query;
+    const userRole = req.user.role;
+    const userId = req.user.id;
 
     let query = supabaseAdmin
       .from('orders')
@@ -28,6 +30,12 @@ router.get('/', authenticateToken, async (req, res) => {
       `)
       .order('created_at', { ascending: false });
 
+    // Apply role-based filtering
+    if (userRole !== 'admin') {
+      // Non-admin users can only see their own orders
+      query = query.eq('user_id', userId);
+    }
+
     if (status && status !== 'all') {
       query = query.eq('status', status);
     }
@@ -43,9 +51,16 @@ router.get('/', authenticateToken, async (req, res) => {
     // Get total count for pagination
     let count = 0;
     if (!error) {
-      const { count: totalCount } = await supabaseAdmin
+      let countQuery = supabaseAdmin
         .from('orders')
         .select('*', { count: 'exact', head: true });
+      
+      // Apply role-based filtering to count query as well
+      if (userRole !== 'admin') {
+        countQuery = countQuery.eq('user_id', userId);
+      }
+      
+      const { count: totalCount } = await countQuery;
       count = totalCount || 0;
     }
 
@@ -251,8 +266,8 @@ router.post('/', authenticateToken, [
 
 // @route   PATCH /api/orders/:id/status
 // @desc    Update order status
-// @access  Private (Manager)
-router.patch('/:id/status', authenticateToken, requireManager, [
+// @access  Private (Admin only)
+router.patch('/:id/status', authenticateToken, requireAdmin, [
   body('status').isIn(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'])
     .withMessage('Invalid status')
 ], async (req, res) => {
