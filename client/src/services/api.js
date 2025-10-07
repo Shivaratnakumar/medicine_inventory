@@ -67,8 +67,9 @@ export const authAPI = {
   login: (email, password) => api.post('/auth/login', { email, password }),
   register: (userData) => api.post('/auth/register', userData),
   verifyToken: () => api.get('/auth/verify'),
-  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
-  resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  forgotPassword: (data) => api.post('/auth/forgot-password', data),
+  verifyOTP: (phone, otp) => api.post('/auth/verify-otp', { phone, otp }),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
 // Medicines API
@@ -90,6 +91,47 @@ export const medicinesAPI = {
     const response = await api.get(`/medicines/expiring?days=${days}`);
     return response.data; // Return the actual data, not the axios response
   },
+};
+
+// Medicine Names API (for autocomplete and fuzzy search)
+export const medicineNamesAPI = {
+  getAll: async (params) => {
+    const response = await api.get('/medicine-names', { params });
+    return response.data;
+  },
+  getAutocomplete: async (query, limit = 10) => {
+    const response = await api.get(`/medicine-names/autocomplete?q=${query}&limit=${limit}`);
+    return response.data;
+  },
+  search: async (query, options = {}) => {
+    const { type = 'all', min_score = 0.1, limit = 20, offset = 0 } = options;
+    const params = new URLSearchParams({
+      q: query,
+      type,
+      min_score: min_score.toString(),
+      limit: limit.toString(),
+      offset: offset.toString()
+    });
+    const response = await api.get(`/medicine-names/search?${params}`);
+    return response.data;
+  },
+  create: (data) => api.post('/medicine-names', data),
+  update: (id, data) => api.put(`/medicine-names/${id}`, data),
+  delete: (id) => api.delete(`/medicine-names/${id}`),
+  bulkImport: (medicines) => api.post('/medicine-names/bulk-import', { medicines }),
+  getStats: async () => {
+    const response = await api.get('/medicine-names/stats');
+    return response.data;
+  },
+};
+
+// Convenience functions for autocomplete
+export const getAutocompleteSuggestions = async (query, limit = 10) => {
+  return await medicineNamesAPI.getAutocomplete(query, limit);
+};
+
+export const searchMedicineNames = async (query, options = {}) => {
+  return await medicineNamesAPI.search(query, options);
 };
 
 // Orders API - Using direct SQL endpoints to bypass Supabase issues

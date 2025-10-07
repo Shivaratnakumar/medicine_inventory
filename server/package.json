@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.4",
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.12.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -31,7 +32,8 @@
     "openai": "^6.1.0",
     "pg": "^8.16.3",
     "socket.io": "^4.7.4",
-    "stripe": "^14.7.0"
+    "stripe": "^14.7.0",
+    "twilio": "^5.10.2"
   },
   "devDependencies": {
     "jest": "^29.7.0",

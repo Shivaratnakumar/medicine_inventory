@@ -5,6 +5,7 @@ import { CartProvider } from './contexts/CartContext';
 import Layout from './components/Layout/Layout';
 import CartModal from './components/Cart/CartModal';
 import Login from './pages/Auth/Login';
+import ResetPassword from './pages/Auth/ResetPassword';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Medicines from './pages/Medicines/Medicines';
 import Orders from './pages/Orders/Orders';
@@ -69,6 +70,10 @@ function App() {
                     <Login />
                   </PublicRoute>
                 } 
+              />
+              <Route 
+                path="/reset-password" 
+                element={<ResetPassword />} 
               />
 
               {/* Protected Routes */}

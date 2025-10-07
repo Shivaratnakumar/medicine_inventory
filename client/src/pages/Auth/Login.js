@@ -3,10 +3,14 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '../../contexts/AuthContext';
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import RegisterForm from '../../components/Auth/RegisterForm';
+import ForgotPasswordModal from '../../components/Auth/ForgotPasswordModal';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { login } = useAuth();
 
   const {
@@ -42,11 +46,14 @@ const Login = () => {
             Medicine Inventory
           </h2>
           <p className="mt-2 text-sm text-medical-600">
-            Sign in to your account
+            {isRegisterMode ? 'Create your account' : 'Sign in to your account'}
           </p>
         </div>
 
-        <div className="bg-white py-8 px-6 shadow-xl rounded-lg border border-medical-200">
+        {isRegisterMode ? (
+          <RegisterForm onSwitchToLogin={() => setIsRegisterMode(false)} />
+        ) : (
+          <div className="bg-white py-8 px-6 shadow-xl rounded-lg border border-medical-200">
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-medical-700">
@@ -131,9 +138,13 @@ const Login = () => {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="font-medium text-primary-600 hover:text-primary-500"
+                >
                   Forgot your password?
-                </a>
+                </button>
               </div>
             </div>
 
@@ -154,13 +165,18 @@ const Login = () => {
             <div className="text-center">
               <p className="text-sm text-medical-600">
                 Don't have an account?{' '}
-                <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                  Contact administrator
-                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsRegisterMode(true)}
+                  className="font-medium text-primary-600 hover:text-primary-500"
+                >
+                  Create one here
+                </button>
               </p>
             </div>
           </form>
-        </div>
+          </div>
+        )}
 
         {/* Demo credentials */}
         <div className="bg-gradient-to-r from-primary-50 to-teal-50 border border-primary-200 rounded-lg p-4">
@@ -171,6 +187,12 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
     </div>
   );
 };

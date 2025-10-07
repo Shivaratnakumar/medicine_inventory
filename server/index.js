@@ -41,6 +41,7 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 const authRoutes = require('./routes/auth');
 const medicineRoutes = require('./routes/medicines');
+const medicineNamesRoutes = require('./routes/medicine-names');
 const orderRoutes = require('./routes/orders');
 const orderDirectRoutes = require('./routes/orders-direct-sql');
 const billingRoutes = require('./routes/billing');
@@ -114,6 +115,7 @@ app.get('/health', async (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/medicines', medicineRoutes);
+app.use('/api/medicine-names', medicineNamesRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api', orderDirectRoutes); // Direct SQL orders routes
 app.use('/api/billing', billingRoutes);
