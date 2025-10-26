@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import MedicineAutocomplete from './MedicineAutocomplete';
-import { searchMedicineNames } from '../../services/api';
+import { searchMedicineNames, ollamaAPI } from '../../services/api';
 
 const MedicineSearchExample = () => {
   const [selectedMedicine, setSelectedMedicine] = useState(null);
@@ -21,15 +21,41 @@ const MedicineSearchExample = () => {
 
     setIsSearching(true);
     try {
-      const response = await searchMedicineNames(query, {
-        type: 'all',
-        min_score: 0.1,
-        limit: 20
+      // Try Ollama API first
+      const ollamaResponse = await ollamaAPI.search(query, {
+        limit: 20,
+        min_score: 0.1
       });
-      setSearchResults(response.data || []);
+      
+      if (ollamaResponse.success && ollamaResponse.data && ollamaResponse.data.length > 0) {
+        setSearchResults(ollamaResponse.data);
+        console.log('Using Ollama search results:', ollamaResponse.source);
+      } else {
+        // Fallback to database search
+        console.log('Ollama search failed or no results, using database search');
+        const response = await searchMedicineNames(query, {
+          type: 'all',
+          min_score: 0.1,
+          limit: 20
+        });
+        setSearchResults(response.data || []);
+      }
     } catch (error) {
       console.error('Search error:', error);
-      setSearchResults([]);
+      
+      // Fallback to database search on error
+      try {
+        console.log('Falling back to database search due to error');
+        const response = await searchMedicineNames(query, {
+          type: 'all',
+          min_score: 0.1,
+          limit: 20
+        });
+        setSearchResults(response.data || []);
+      } catch (fallbackError) {
+        console.error('Fallback search error:', fallbackError);
+        setSearchResults([]);
+      }
     } finally {
       setIsSearching(false);
     }

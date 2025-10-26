@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicine Search Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .medicine-item {
+            padding: 10px;
+            border: 1px solid #eee;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .error {
+            color: red;
+            background: #ffe6e6;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            color: green;
+            background: #e6ffe6;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Medicine Search Test</h1>
+    <p>This page tests the medicine search functionality to ensure the "description column does not exist" error is fixed.</p>
+    
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Search for medicines (e.g., paracetamol, ibuprofen)" />
+    </div>
+    
+    <div id="status"></div>
+    <div id="results" class="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        
+        // Get auth token (you'll need to login first)
+        let authToken = localStorage.getItem('authToken');
+        
+        if (!authToken) {
+            document.getElementById('status').innerHTML = 
+                '<div class="error">Please login first. Open browser console and run: localStorage.setItem("authToken", "YOUR_TOKEN_HERE")</div>';
+        }
+        
+        async function searchMedicines(query) {
+            if (!query || query.length < 2) {
+                document.getElementById('results').innerHTML = '';
+                return;
+            }
+            
+            try {
+                document.getElementById('status').innerHTML = '<div>Searching...</div>';
+                
+                const response = await fetch(`${API_BASE}/medicine-names/search?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data.data);
+                    document.getElementById('status').innerHTML = 
+                        `<div class="success">✅ Search successful! Found ${data.data.length} results</div>`;
+                } else {
+                    document.getElementById('status').innerHTML = 
+                        `<div class="error">❌ Search failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                document.getElementById('status').innerHTML = 
+                    `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        function displayResults(medicines) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (medicines.length === 0) {
+                resultsDiv.innerHTML = '<div>No medicines found</div>';
+                return;
+            }
+            
+            const html = medicines.map(medicine => `
+                <div class="medicine-item">
+                    <strong>${medicine.name}</strong>
+                    ${medicine.generic_name ? `<br>Generic: ${medicine.generic_name}` : ''}
+                    ${medicine.brand_name ? `<br>Brand: ${medicine.brand_name}` : ''}
+                    ${medicine.common_names && medicine.common_names.length > 0 ? 
+                        `<br>Common names: ${medicine.common_names.join(', ')}` : ''}
+                    ${medicine.score ? `<br>Score: ${medicine.score.toFixed(3)}` : ''}
+                </div>
+            `).join('');
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        // Add event listener for search input
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchMedicines(e.target.value);
+        });
+        
+        // Test the API on page load
+        window.addEventListener('load', () => {
+            if (authToken) {
+                searchMedicines('test');
+            }
+        });
+    </script>
+</body>
+</html>

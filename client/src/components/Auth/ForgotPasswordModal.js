@@ -73,8 +73,8 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleOTPVerified = (resetToken) => {
-    setUserData(prev => ({ ...prev, resetToken }));
+  const handleOTPVerified = (resetToken, otp) => {
+    setUserData(prev => ({ ...prev, resetToken, otp }));
     setStep('reset');
   };
 

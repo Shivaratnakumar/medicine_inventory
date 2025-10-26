@@ -286,13 +286,6 @@ INSERT INTO users (email, password_hash, first_name, last_name, role) VALUES
 INSERT INTO stores (name, address, city, state, zip_code, phone, email) VALUES
 ('Main Pharmacy', '123 Main Street', 'New York', 'NY', '10001', '+1-555-0123', 'main@pharmacy.com');
 
--- Insert sample categories
-INSERT INTO categories (name, description) VALUES
-('Pain Relief', 'Medicines for pain management'),
-('Antibiotics', 'Antibacterial medications'),
-('Vitamins', 'Nutritional supplements'),
-('Cardiovascular', 'Heart and blood vessel medications'),
-('Respiratory', 'Lung and breathing medications');
 
 -- Insert sample medicines
 INSERT INTO medicines (name, generic_name, sku, description, manufacturer, price, cost_price, quantity_in_stock, minimum_stock_level, maximum_stock_level, expiry_date, prescription_required, category_id) VALUES

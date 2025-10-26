@@ -18,7 +18,8 @@ import {
   LogOut,
   Menu,
   X,
-  Package
+  Package,
+  Truck
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -30,16 +31,16 @@ const Layout = ({ children }) => {
   const mainNavigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Medicines', href: '/medicines', icon: Pill },
-    { name: 'Expiry Tracker', href: '/expiry-tracker', icon: Calendar },
+    ...(user?.role === 'admin' ? [{ name: 'Expiry Tracker', href: '/expiry-tracker', icon: Calendar }] : []),
     { name: 'Orders', href: '/orders', icon: ShoppingCart },
-    { name: 'Order Tracking', href: '/order-tracking', icon: Package },
+    { name: 'Supply Hub', href: '/supply-hub', icon: Truck },
     { name: 'Billing', href: '/billing', icon: Receipt },
     { name: 'Payment', href: '/payment', icon: CreditCard },
   ];
 
   const managementNavigation = [
-    { name: 'Stores', href: '/stores', icon: Store },
-    { name: 'Alerts', href: '/alerts', icon: AlertTriangle },
+    { name: 'Branches', href: '/stores', icon: Store },
+    ...(user?.role === 'admin' ? [{ name: 'Alerts', href: '/alerts', icon: AlertTriangle }] : []),
     { name: 'Notifications', href: '/notifications', icon: Bell },
     { name: 'Support', href: '/support', icon: HeadphonesIcon },
     { name: 'Feedback', href: '/feedback', icon: MessageSquare },

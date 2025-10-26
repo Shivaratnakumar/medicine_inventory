@@ -16,6 +16,7 @@ import { medicinesAPI } from '../../services/api';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
+import MedicineAutocomplete from '../../components/MedicineSearch/MedicineAutocomplete';
 import toast from 'react-hot-toast';
 
 const Medicines = () => {
@@ -33,18 +34,18 @@ const Medicines = () => {
   const isAdmin = user?.role === 'admin';
 
 
-  // Debounce search term
+  // Optimized debounce search term with faster response
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 500); // Increased debounce time to 500ms
+    }, 200); // Reduced to 200ms for faster response
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   const queryClient = useQueryClient();
 
-  // Fetch medicines
+  // Fetch medicines with optimized caching
   const { data: medicinesResponse, isLoading, error, isFetching } = useQuery(
     ['medicines', debouncedSearchTerm, filterCategory, filterExpiry],
     () => medicinesAPI.getAll({
@@ -56,6 +57,8 @@ const Medicines = () => {
       retry: 1,
       refetchOnWindowFocus: false,
       enabled: true, // Always enabled
+      staleTime: 30000, // Consider data fresh for 30 seconds
+      cacheTime: 300000, // Keep in cache for 5 minutes
       onError: (error) => {
         console.error('Error fetching medicines:', error);
       }
@@ -129,9 +132,9 @@ const Medicines = () => {
           <div className="mt-4 sm:mt-0">
             <button
               onClick={() => setShowAddModal(true)}
-              className="btn btn-primary"
+              className="btn btn-primary btn-lg"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-5 w-5 mr-2" />
               Add Medicine
             </button>
           </div>
@@ -151,7 +154,7 @@ const Medicines = () => {
             </div>
             <input
               type="text"
-              placeholder="Search medicines..."
+              placeholder={isFetching ? "Searching..." : "Search medicines..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => {
@@ -159,8 +162,14 @@ const Medicines = () => {
                   e.preventDefault();
                 }
               }}
-              className="input pl-10"
+              className={`input pl-10 ${isFetching ? 'bg-blue-50 border-blue-300' : ''}`}
+              disabled={isFetching}
             />
+            {isFetching && (
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <div className="text-xs text-blue-600 font-medium">Searching...</div>
+              </div>
+            )}
           </div>
           
           <select
@@ -244,7 +253,7 @@ const Medicines = () => {
                   
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Price:</span>
-                    <span className="text-sm font-medium">${medicine.price}</span>
+                    <span className="text-sm font-medium">₹{medicine.price}</span>
                   </div>
                   
                   <div className="flex items-center justify-between">
@@ -336,7 +345,7 @@ const Medicines = () => {
 
 // Medicine Modal Component
 const MedicineModal = ({ medicine, onClose, onSuccess }) => {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm({
     defaultValues: medicine ? {
       ...medicine,
       quantity: medicine.quantity_in_stock || medicine.quantity,
@@ -402,10 +411,30 @@ const MedicineModal = ({ medicine, onClose, onSuccess }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Medicine Name *</label>
-                <input
-                  {...register('name', { required: 'Medicine name is required' })}
-                  className="input mt-1"
-                  placeholder="Enter medicine name"
+                <MedicineAutocomplete
+                  onSelect={(medicine) => {
+                    // Set the form values when a medicine is selected
+                    setValue('name', medicine.name);
+                    setValue('generic_name', medicine.generic_name || '');
+                    setValue('description', medicine.description || '');
+                    setValue('manufacturer', medicine.manufacturer || '');
+                    setValue('price', medicine.price || 0);
+                    setValue('cost_price', medicine.cost_price || 0);
+                    setValue('quantity_in_stock', medicine.quantity_in_stock || 0);
+                    setValue('minimum_stock_level', medicine.minimum_stock_level || 0);
+                    setValue('maximum_stock_level', medicine.maximum_stock_level || 0);
+                    setValue('expiry_date', medicine.expiry_date || '');
+                    setValue('manufacturing_date', medicine.manufacturing_date || '');
+                    setValue('prescription_required', medicine.prescription_required || false);
+                    setValue('barcode', medicine.barcode || '');
+                    setValue('sku', medicine.sku || '');
+                    setValue('image_url', medicine.image_url || '');
+                  }}
+                  placeholder="Search and select medicine..."
+                  className="mt-1"
+                  showGeneric={true}
+                  showBrand={true}
+                  maxSuggestions={10}
                 />
                 {errors.name && (
                   <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>

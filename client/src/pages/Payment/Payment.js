@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm } from 'react-hook-form';
 import {
   CreditCard,
-  DollarSign,
+  Receipt,
   Calendar,
   CheckCircle,
   AlertCircle,
@@ -138,7 +138,7 @@ const Payment = () => {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="p-3 rounded-md bg-green-500">
-                  <DollarSign className="h-6 w-6 text-white" />
+                  <Receipt className="h-6 w-6 text-white" />
                 </div>
               </div>
               <div className="ml-5 w-0 flex-1">
@@ -147,7 +147,7 @@ const Payment = () => {
                     Paid Amount
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    ${paidAmount.toLocaleString()}
+                    ₹{paidAmount.toLocaleString()}
                   </dd>
                 </dl>
               </div>
@@ -169,7 +169,7 @@ const Payment = () => {
                     Pending
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    ${pendingAmount.toLocaleString()}
+                    ₹{pendingAmount.toLocaleString()}
                   </dd>
                 </dl>
               </div>
@@ -191,7 +191,7 @@ const Payment = () => {
                     Failed
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    ${failedAmount.toLocaleString()}
+                    ₹{failedAmount.toLocaleString()}
                   </dd>
                 </dl>
               </div>
@@ -258,8 +258,8 @@ const Payment = () => {
                     </h4>
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       <div className="flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        ${payment.amount}
+                        <Receipt className="h-4 w-4 mr-1" />
+                        ₹{payment.amount}
                       </div>
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-1" />
@@ -408,7 +408,7 @@ const ProcessPaymentModal = ({ billingRecords, onClose, onSuccess }) => {
                 <option value="">Select an invoice</option>
                 {(billingRecords && Array.isArray(billingRecords)) ? billingRecords.map((billing) => (
                   <option key={billing.id} value={billing.id}>
-                    {billing.invoice_number} - {billing.customer_name} - ${billing.total_amount}
+                    {billing.invoice_number} - {billing.customer_name} - ₹{billing.total_amount}
                   </option>
                 )) : (
                   <option value="" disabled>No billing records available</option>
@@ -429,7 +429,7 @@ const ProcessPaymentModal = ({ billingRecords, onClose, onSuccess }) => {
                   </div>
                   <div>
                     <span className="text-gray-500">Total:</span>
-                    <span className="ml-2 text-gray-900">${selectedBilling.total_amount}</span>
+                    <span className="ml-2 text-gray-900">₹{selectedBilling.total_amount}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Status:</span>
@@ -528,7 +528,7 @@ const PaymentDetailsModal = ({ payment, onClose }) => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Amount</label>
-                <p className="text-sm text-gray-900">${payment.amount}</p>
+                <p className="text-sm text-gray-900">₹{payment.amount}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Payment Method</label>

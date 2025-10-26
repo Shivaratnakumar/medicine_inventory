@@ -1,0 +1,20 @@
+-- Add more medicines starting with 'D' for testing
+INSERT INTO medicine_names (name, generic_name, brand_name, common_names, popularity_score) VALUES
+('Diazepam', 'Diazepam', 'Valium', ARRAY['Valium', 'Diastat'], 85),
+('Digoxin', 'Digoxin', 'Lanoxin', ARRAY['Lanoxin', 'Digitek'], 80),
+('Doxycycline', 'Doxycycline', 'Vibramycin', ARRAY['Vibramycin', 'Doryx'], 75),
+('Dexamethasone', 'Dexamethasone', 'Decadron', ARRAY['Decadron', 'DexPak'], 70),
+('Diltiazem', 'Diltiazem', 'Cardizem', ARRAY['Cardizem', 'Tiazac'], 65),
+('Diclofenac', 'Diclofenac', 'Voltaren', ARRAY['Voltaren', 'Cataflam'], 60),
+('Dexamethasone', 'Dexamethasone', 'Decadron', ARRAY['Decadron', 'DexPak'], 55),
+('Doxycycline', 'Doxycycline', 'Vibramycin', ARRAY['Vibramycin', 'Doryx'], 50),
+('Diazepam', 'Diazepam', 'Valium', ARRAY['Valium', 'Diastat'], 45),
+('Digoxin', 'Digoxin', 'Lanoxin', ARRAY['Lanoxin', 'Digitek'], 40),
+('Diclofenac', 'Diclofenac', 'Voltaren', ARRAY['Voltaren', 'Cataflam'], 35),
+('Diltiazem', 'Diltiazem', 'Cardizem', ARRAY['Cardizem', 'Tiazac'], 30),
+('Dexamethasone', 'Dexamethasone', 'Decadron', ARRAY['Decadron', 'DexPak'], 25),
+('Doxycycline', 'Doxycycline', 'Vibramycin', ARRAY['Vibramycin', 'Doryx'], 20),
+('Diazepam', 'Diazepam', 'Valium', ARRAY['Valium', 'Diastat'], 15),
+('Digoxin', 'Digoxin', 'Lanoxin', ARRAY['Lanoxin', 'Digitek'], 10),
+('Diclofenac', 'Diclofenac', 'Voltaren', ARRAY['Voltaren', 'Cataflam'], 5),
+('Diltiazem', 'Diltiazem', 'Cardizem', ARRAY['Cardizem', 'Tiazac'], 1);

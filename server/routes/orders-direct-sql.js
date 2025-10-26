@@ -153,10 +153,20 @@ router.get('/orders-direct', authenticateToken, async (req, res) => {
 // @access  Private
 router.post('/orders-direct', authenticateToken, async (req, res) => {
   try {
+    // Check if database is available
+    if (!supabaseAdmin) {
+      console.error('❌ Database not available - Supabase client is null');
+      return res.status(503).json({
+        success: false,
+        message: 'Database service unavailable. Please check server configuration.',
+        error: 'Database connection not established'
+      });
+    }
+    
     console.log('📝 Creating new order with data:', req.body);
     console.log('📝 Items received:', JSON.stringify(req.body.items, null, 2));
     console.log('📝 Store ID received:', req.body.store_id);
-    const { customer_name, customer_email, customer_phone, customer_address, items, store_id, notes } = req.body;
+    const { customer_name, customer_email, customer_phone, customer_address, items, store_id, notes, order_type } = req.body;
     
     // Validate required fields
     if (!customer_name || customer_name.trim() === '') {
@@ -185,8 +195,9 @@ router.post('/orders-direct', authenticateToken, async (req, res) => {
       }
     }
     
-    // Generate order number
-    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Generate order number based on order type
+    const orderPrefix = order_type === 'prescription' ? 'PRES' : 'ORD';
+    const orderNumber = `${orderPrefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     // Calculate total amount
     let totalAmount = 0;
@@ -251,20 +262,29 @@ router.post('/orders-direct', authenticateToken, async (req, res) => {
     
     // Create order
     console.log('📦 Creating order with total amount:', totalAmount);
+    
+    // Prepare order data
+    const orderData = {
+      order_number: orderNumber,
+      customer_name: customer_name.trim(),
+      customer_email: customer_email?.trim() || null,
+      customer_phone: customer_phone?.trim() || null,
+      customer_address: customer_address?.trim() || null,
+      store_id: store_id || null,
+      user_id: req.user.id,
+      total_amount: totalAmount,
+      notes: notes?.trim() || null,
+      status: 'pending'
+    };
+    
+    // Add order_type if it exists in the database
+    if (order_type) {
+      orderData.order_type = order_type;
+    }
+    
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .insert({
-        order_number: orderNumber,
-        customer_name: customer_name.trim(),
-        customer_email: customer_email?.trim() || null,
-        customer_phone: customer_phone?.trim() || null,
-        customer_address: customer_address?.trim() || null,
-        store_id: store_id || null,
-        user_id: req.user.id,
-        total_amount: totalAmount,
-        notes: notes?.trim() || null,
-        status: 'pending'
-      })
+      .insert(orderData)
       .select()
       .single();
     

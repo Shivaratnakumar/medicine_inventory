@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { searchMedicineNames, getAutocompleteSuggestions } from '../../services/api';
+import { searchMedicineNames, getAutocompleteSuggestions, ollamaAPI } from '../../services/api';
 
 const MedicineAutocomplete = ({ 
   onSelect, 
@@ -20,24 +20,55 @@ const MedicineAutocomplete = ({
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
+  const searchCacheRef = useRef(new Map());
+  const lastSearchRef = useRef('');
 
-  // Debounced search function
+  // Optimized debounced search function with caching and faster debounce
   const debouncedSearch = (searchQuery) => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
     
+    // Skip if same query as last search
+    if (searchQuery === lastSearchRef.current) {
+      return;
+    }
+    
     debounceTimeoutRef.current = setTimeout(async () => {
       if (searchQuery.length >= minQueryLength) {
+        // Check cache first
+        const cacheKey = `${searchQuery.toLowerCase()}_${maxSuggestions}`;
+        if (searchCacheRef.current.has(cacheKey)) {
+          const cachedResults = searchCacheRef.current.get(cacheKey);
+          setSuggestions(cachedResults);
+          setShowSuggestions(true);
+          setLoading(false);
+          return;
+        }
+        
         setLoading(true);
         setError(null);
+        lastSearchRef.current = searchQuery;
         
         try {
+          // Use database search directly for better performance
+          // Skip Ollama API to reduce latency
           const response = await getAutocompleteSuggestions(searchQuery, maxSuggestions);
-          setSuggestions(response.data || []);
+          const results = response.data || [];
+          
+          // Cache the results
+          searchCacheRef.current.set(cacheKey, results);
+          
+          // Limit cache size to prevent memory issues
+          if (searchCacheRef.current.size > 50) {
+            const firstKey = searchCacheRef.current.keys().next().value;
+            searchCacheRef.current.delete(firstKey);
+          }
+          
+          setSuggestions(results);
           setShowSuggestions(true);
         } catch (err) {
-          console.error('Autocomplete error:', err);
+          console.error('Search error:', err);
           setError('Failed to load suggestions');
           setSuggestions([]);
         } finally {
@@ -46,8 +77,9 @@ const MedicineAutocomplete = ({
       } else {
         setSuggestions([]);
         setShowSuggestions(false);
+        lastSearchRef.current = '';
       }
-    }, 300); // 300ms debounce
+    }, 150); // Reduced to 150ms for faster response
   };
 
   useEffect(() => {
@@ -214,7 +246,7 @@ const MedicineAutocomplete = ({
                 {/* Price */}
                 {medicine.price && (
                   <div className="text-xs text-green-600 mt-1 font-medium">
-                    Price: ${medicine.price}
+                    Price: ₹{medicine.price}
                   </div>
                 )}
                 

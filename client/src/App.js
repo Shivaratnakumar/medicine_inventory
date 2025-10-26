@@ -2,14 +2,17 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { StoreProvider } from './contexts/StoreContext';
 import Layout from './components/Layout/Layout';
 import CartModal from './components/Cart/CartModal';
 import Login from './pages/Auth/Login';
 import ResetPassword from './pages/Auth/ResetPassword';
+import StandaloneResetPassword from './pages/Auth/StandaloneResetPassword';
+import TestResetPassword from './pages/Auth/TestResetPassword';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Medicines from './pages/Medicines/Medicines';
 import Orders from './pages/Orders/Orders';
-import OrderTracking from './pages/OrderTracking/OrderTracking';
+import SupplyHub from './pages/SupplyHub/SupplyHub';
 import Billing from './pages/Billing/Billing';
 import Stores from './pages/Stores/Stores';
 import ExpiryTracker from './pages/ExpiryTracker/ExpiryTracker';
@@ -20,6 +23,7 @@ import Feedback from './pages/Feedback/Feedback';
 import Support from './pages/Support/Support';
 import Payment from './pages/Payment/Payment';
 import LoadingSpinner from './components/UI/LoadingSpinner';
+import PrescriptionScannerTest from './components/OCR/PrescriptionScannerTest';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
@@ -58,8 +62,9 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <Router>
+      <StoreProvider>
+        <CartProvider>
+          <Router>
           <div className="App">
             <Routes>
               {/* Public Routes */}
@@ -73,7 +78,7 @@ function App() {
               />
               <Route 
                 path="/reset-password" 
-                element={<ResetPassword />} 
+                element={<TestResetPassword />} 
               />
 
               {/* Protected Routes */}
@@ -87,16 +92,25 @@ function App() {
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/medicines" element={<Medicines />} />
                         <Route path="/orders" element={<Orders />} />
-                        <Route path="/order-tracking" element={<OrderTracking />} />
+                        <Route path="/supply-hub" element={<SupplyHub />} />
                         <Route path="/billing" element={<Billing />} />
                         <Route path="/stores" element={<Stores />} />
-                        <Route path="/expiry-tracker" element={<ExpiryTracker />} />
-                        <Route path="/alerts" element={<Alerts />} />
+                        <Route path="/expiry-tracker" element={
+                          <ProtectedRoute requireAdmin={true}>
+                            <ExpiryTracker />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/alerts" element={
+                          <ProtectedRoute requireAdmin={true}>
+                            <Alerts />
+                          </ProtectedRoute>
+                        } />
                         <Route path="/notifications" element={<Notifications />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/feedback" element={<Feedback />} />
                         <Route path="/support" element={<Support />} />
                         <Route path="/payment" element={<Payment />} />
+                        <Route path="/prescription-test" element={<PrescriptionScannerTest />} />
                       </Routes>
                     </Layout>
                     <CartModal />
@@ -105,8 +119,9 @@ function App() {
               />
             </Routes>
           </div>
-        </Router>
-      </CartProvider>
+          </Router>
+        </CartProvider>
+      </StoreProvider>
     </AuthProvider>
   );
 }

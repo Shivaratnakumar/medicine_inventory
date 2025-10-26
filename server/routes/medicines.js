@@ -183,8 +183,8 @@ router.get('/search', authenticateToken, async (req, res) => {
 
 // @route   GET /api/medicines/low-stock
 // @desc    Get low stock medicines
-// @access  Private
-router.get('/low-stock', authenticateToken, async (req, res) => {
+// @access  Private (Admin only)
+router.get('/low-stock', authenticateToken, requireAdmin, async (req, res) => {
   try {
     // Get all medicines and filter in JavaScript
     const { data: allMedicines, error } = await supabaseAdmin
@@ -218,8 +218,8 @@ router.get('/low-stock', authenticateToken, async (req, res) => {
 
 // @route   GET /api/medicines/expiring
 // @desc    Get expiring medicines
-// @access  Private
-router.get('/expiring', authenticateToken, async (req, res) => {
+// @access  Admin only
+router.get('/expiring', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { days = 30 } = req.query;
     const today = new Date().toISOString().split('T')[0];

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 // Process management and error handling
@@ -52,6 +53,9 @@ const feedbackRoutes = require('./routes/feedback');
 const supportRoutes = require('./routes/support');
 const paymentRoutes = require('./routes/payment');
 const profileRoutes = require('./routes/profile');
+const supplyRelationshipRoutes = require('./routes/supply-relationships');
+const supplyOrderRoutes = require('./routes/supply-orders');
+const supplyPaymentRoutes = require('./routes/supply-payments');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -126,6 +130,9 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/supply-relationships', supplyRelationshipRoutes);
+app.use('/api/supply-orders', supplyOrderRoutes);
+app.use('/api/supply-payments', supplyPaymentRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -159,12 +166,21 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
-  });
+// Serve static files from the React app build directory
+app.use(express.static(path.join(__dirname, '../client/build')));
+
+// Handle React routing, return all requests to React app
+// But exclude API routes
+app.get('*', (req, res) => {
+  // Don't serve React app for API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({
+      success: false,
+      message: 'API route not found'
+    });
+  }
+  
+  res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
 });
 
 // Start server

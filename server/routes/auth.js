@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { supabaseAdmin } = require('../config/supabase');
 const { authenticateToken } = require('../middleware/auth');
-const smsService = require('../services/smsService');
+const smsService = require('../services/realSmsService');
 const emailService = require('../services/emailService');
 
 const router = express.Router();
@@ -296,17 +296,23 @@ router.post('/forgot-password', forgotPasswordValidation, async (req, res) => {
         });
       }
 
+      console.log('🔧 DEBUG: Original phone:', phone);
       const formattedPhone = smsService.formatPhoneNumber(phone);
+      console.log('🔧 DEBUG: Formatted phone:', formattedPhone);
 
       // Check if user exists with this phone number
-      const { data: user } = await supabaseAdmin
+      console.log('🔧 DEBUG: Looking for user with phone:', formattedPhone);
+      const { data: user, error: userError } = await supabaseAdmin
         .from('users')
         .select('id, email, first_name, phone')
         .eq('phone', formattedPhone)
         .eq('is_active', true)
         .single();
 
+      console.log('🔧 DEBUG: User lookup result:', { user, userError });
+
       if (!user) {
+        console.log('🔧 DEBUG: No user found, returning success message');
         // Don't reveal if user exists or not
         return res.json({
           success: true,
@@ -315,10 +321,13 @@ router.post('/forgot-password', forgotPasswordValidation, async (req, res) => {
       }
 
       // Generate OTP
+      console.log('🔧 DEBUG: Generating OTP...');
       const otp = smsService.generateOTP();
+      console.log('🔧 DEBUG: OTP generated:', otp);
 
       // Store OTP in database
-      await supabaseAdmin
+      console.log('🔧 DEBUG: Storing OTP in database...');
+      const { error: dbError } = await supabaseAdmin
         .from('otp_verifications')
         .insert({
           user_id: user.id,
@@ -330,8 +339,20 @@ router.post('/forgot-password', forgotPasswordValidation, async (req, res) => {
           user_agent: req.get('User-Agent')
         });
 
+      if (dbError) {
+        console.log('❌ DEBUG: Database error:', dbError);
+      } else {
+        console.log('✅ DEBUG: OTP stored in database');
+      }
+
       // Send SMS
-      await smsService.sendOTP(formattedPhone, otp, 'password_reset');
+      console.log('🔧 DEBUG: Calling SMS service...');
+      try {
+        await smsService.sendOTP(formattedPhone, otp, 'password_reset');
+        console.log('✅ DEBUG: SMS service called successfully');
+      } catch (smsError) {
+        console.log('❌ DEBUG: SMS service error:', smsError);
+      }
 
       res.json({
         success: true,
@@ -374,37 +395,56 @@ router.post('/verify-otp', otpVerificationValidation, async (req, res) => {
 
     const formattedPhone = smsService.formatPhoneNumber(phone);
 
-    // Use the database function to validate OTP
-    const { data: result, error } = await supabaseAdmin
-      .rpc('validate_otp', {
-        p_phone: formattedPhone,
-        p_otp_code: otp,
-        p_type: 'password_reset'
-      });
+    // Validate OTP directly without database function
+    const { data: otpRecord, error: otpError } = await supabaseAdmin
+      .from('otp_verifications')
+      .select('*')
+      .eq('phone', formattedPhone)
+      .eq('type', 'password_reset')
+      .eq('otp_code', otp)
+      .gt('expires_at', new Date().toISOString())
+      .is('verified_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
-    if (error) {
-      console.error('OTP verification error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Error verifying OTP'
-      });
-    }
-
-    if (!result || result.length === 0) {
+    if (otpError || !otpRecord) {
       return res.status(400).json({
         success: false,
         message: 'Invalid or expired OTP'
       });
     }
 
-    const { is_valid, user_id, message } = result[0];
-
-    if (!is_valid) {
+    // Check if attempts exceeded
+    if (otpRecord.attempts >= otpRecord.max_attempts) {
       return res.status(400).json({
         success: false,
-        message: message
+        message: 'Too many attempts. Please request a new OTP.'
       });
     }
+
+    // Get user ID
+    const { data: user, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('phone', formattedPhone)
+      .eq('is_active', true)
+      .single();
+
+    if (userError || !user) {
+      return res.status(400).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Mark OTP as verified
+    await supabaseAdmin
+      .from('otp_verifications')
+      .update({ verified_at: new Date().toISOString() })
+      .eq('id', otpRecord.id);
+
+    const user_id = user.id;
 
     // Generate a temporary token for password reset
     const resetToken = jwt.sign(
@@ -506,22 +546,27 @@ router.post('/reset-password', resetPasswordValidation, async (req, res) => {
 
       const formattedPhone = smsService.formatPhoneNumber(phone);
 
-      // Verify OTP again
-      const { data: result, error } = await supabaseAdmin
-        .rpc('validate_otp', {
-          p_phone: formattedPhone,
-          p_otp_code: otp,
-          p_type: 'password_reset'
-        });
+      // Verify OTP directly
+      const { data: otpRecord, error: otpError } = await supabaseAdmin
+        .from('otp_verifications')
+        .select('*, users!inner(id)')
+        .eq('phone', formattedPhone)
+        .eq('type', 'password_reset')
+        .eq('otp_code', otp)
+        .gt('expires_at', new Date().toISOString())
+        .not('verified_at', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-      if (error || !result || result.length === 0 || !result[0].is_valid) {
+      if (otpError || !otpRecord) {
         return res.status(400).json({
           success: false,
           message: 'Invalid or expired OTP'
         });
       }
 
-      userId = result[0].user_id;
+      userId = otpRecord.users.id;
     }
 
     // Hash new password

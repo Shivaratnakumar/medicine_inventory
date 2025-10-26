@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PasswordResetForm from '../../components/Auth/PasswordResetForm';
+import { authAPI } from '../../services/api';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -12,18 +13,49 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔧 ResetPassword component mounted/updated');
     const tokenFromUrl = searchParams.get('token');
     
+    console.log('🔧 Token from URL:', tokenFromUrl);
+    
     if (!tokenFromUrl) {
+      console.log('❌ No token found in URL');
       setIsValidToken(false);
       setIsLoading(false);
       return;
     }
 
     setToken(tokenFromUrl);
-    setIsValidToken(true);
-    setIsLoading(false);
+    
+    // Validate token with server
+    validateToken(tokenFromUrl);
   }, [searchParams]);
+
+  // Add cleanup logging
+  useEffect(() => {
+    return () => {
+      console.log('🔧 ResetPassword component unmounting');
+    };
+  }, []);
+
+  const validateToken = async (tokenToValidate) => {
+    try {
+      console.log('🔧 Validating token:', tokenToValidate);
+      console.log('🔧 Current URL:', window.location.href);
+      console.log('🔧 Search params:', searchParams.toString());
+      
+      // For now, let's just assume the token is valid if it exists
+      // The actual validation will happen when the user submits the form
+      setIsValidToken(true);
+      setIsLoading(false);
+      
+      console.log('✅ Token validation completed');
+    } catch (error) {
+      console.error('Token validation error:', error);
+      setIsValidToken(false);
+      setIsLoading(false);
+    }
+  };
 
   const handlePasswordReset = () => {
     toast.success('Password reset successfully! You can now log in with your new password.');

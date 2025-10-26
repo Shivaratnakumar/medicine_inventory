@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { supabaseAdmin } = require('../config/supabase');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const Fuse = require('fuse.js');
+const ollamaService = require('../services/ollamaService');
 
 const router = express.Router();
 
@@ -10,27 +11,25 @@ const router = express.Router();
 let medicineNamesCache = [];
 let fuseInstance = null;
 let lastCacheUpdate = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 2 * 60 * 1000; // Reduced to 2 minutes for fresher data
 
 // Initialize Fuse.js with medicine names
 const initializeFuse = (medicineNames) => {
   const fuseOptions = {
     keys: [
-      { name: 'name', weight: 0.3 },
-      { name: 'generic_name', weight: 0.25 },
-      { name: 'brand_name', weight: 0.15 },
-      { name: 'manufacturer', weight: 0.1 },
-      { name: 'description', weight: 0.1 },
+      { name: 'name', weight: 0.4 },
+      { name: 'generic_name', weight: 0.3 },
+      { name: 'brand_name', weight: 0.2 },
       { name: 'common_names', weight: 0.1 }
     ],
-    threshold: 0.4, // Lower threshold means more strict matching
+    threshold: 0.3, // More strict matching for better results
     includeScore: true,
     includeMatches: true,
     minMatchCharLength: 2,
     shouldSort: true,
-    findAllMatches: true,
+    findAllMatches: false, // Disable for better performance
     ignoreLocation: true,
-    useExtendedSearch: true
+    useExtendedSearch: false // Disable for better performance
   };
   
   return new Fuse(medicineNames, fuseOptions);
@@ -45,25 +44,13 @@ const loadMedicineNames = async () => {
         id,
         name,
         generic_name,
-        description,
-        manufacturer,
-        sku,
-        price,
-        cost_price,
-        quantity_in_stock,
-        minimum_stock_level,
-        maximum_stock_level,
-        expiry_date,
-        manufacturing_date,
-        prescription_required,
-        image_url,
-        barcode,
-        is_active,
-        created_at,
-        updated_at,
         brand_name,
         common_names,
-        popularity_score
+        search_vector,
+        popularity_score,
+        is_active,
+        created_at,
+        updated_at
       `)
       .eq('is_active', true)
       .order('popularity_score', { ascending: false });
@@ -95,23 +82,10 @@ const getMedicineNamesCache = async () => {
   return { medicineNames: medicineNamesCache, fuse: fuseInstance };
 };
 
-// Validation rules (compatible with medicines table)
+// Validation rules for medicine names table
 const medicineNameValidation = [
   body('name').trim().isLength({ min: 1, max: 255 }).withMessage('Medicine name is required and must be less than 255 characters'),
   body('generic_name').optional().isLength({ max: 255 }).withMessage('Generic name must be less than 255 characters'),
-  body('description').optional().isString().withMessage('Description must be a string'),
-  body('manufacturer').optional().isLength({ max: 255 }).withMessage('Manufacturer must be less than 255 characters'),
-  body('sku').optional().isLength({ max: 100 }).withMessage('SKU must be less than 100 characters'),
-  body('price').optional().isFloat({ min: 0 }).withMessage('Price must be a positive number'),
-  body('cost_price').optional().isFloat({ min: 0 }).withMessage('Cost price must be a positive number'),
-  body('quantity_in_stock').optional().isInt({ min: 0 }).withMessage('Quantity must be a non-negative integer'),
-  body('minimum_stock_level').optional().isInt({ min: 0 }).withMessage('Minimum stock level must be a non-negative integer'),
-  body('maximum_stock_level').optional().isInt({ min: 0 }).withMessage('Maximum stock level must be a non-negative integer'),
-  body('expiry_date').optional().isISO8601().withMessage('Expiry date must be valid'),
-  body('manufacturing_date').optional().isISO8601().withMessage('Manufacturing date must be valid'),
-  body('prescription_required').optional().isBoolean().withMessage('Prescription required must be boolean'),
-  body('image_url').optional().isURL().withMessage('Image URL must be valid'),
-  body('barcode').optional().isLength({ max: 100 }).withMessage('Barcode must be less than 100 characters'),
   body('brand_name').optional().isLength({ max: 255 }).withMessage('Brand name must be less than 255 characters'),
   body('common_names').optional().isArray().withMessage('Common names must be an array'),
   body('popularity_score').optional().isInt({ min: 0 }).withMessage('Popularity score must be a non-negative integer'),
@@ -183,11 +157,13 @@ router.get('/autocomplete', authenticateToken, async (req, res) => {
     const { medicineNames, fuse } = await getMedicineNamesCache();
     const searchQuery = q.trim();
     
-    // Use Fuse.js for fuzzy search with autocomplete
+    // Use Fuse.js for fuzzy search with autocomplete - optimized for speed
     const fuseOptions = {
       ...fuse.options,
-      threshold: 0.3, // More strict for autocomplete
-      limit: parseInt(limit)
+      threshold: 0.4, // Slightly more lenient for autocomplete
+      limit: parseInt(limit),
+      findAllMatches: false, // Disable for better performance
+      useExtendedSearch: false // Disable for better performance
     };
     
     const autocompleteFuse = new Fuse(medicineNames, fuseOptions);
@@ -301,6 +277,149 @@ router.get('/search', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error in search'
+    });
+  }
+});
+
+// @route   GET /api/medicine-names/ollama-search
+// @desc    Search medicines using Ollama AI
+// @access  Private
+router.get('/ollama-search', authenticateToken, async (req, res) => {
+  try {
+    const { 
+      q, 
+      limit = 10,
+      min_score = 0.1
+    } = req.query;
+    
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query must be at least 2 characters long'
+      });
+    }
+    
+    const searchQuery = q.trim();
+    
+    // Check if Ollama service is available
+    const isOllamaAvailable = await ollamaService.isAvailable();
+    
+    if (!isOllamaAvailable) {
+      return res.status(503).json({
+        success: false,
+        message: 'Ollama service is not available',
+        fallback: true
+      });
+    }
+    
+    // Search using Ollama
+    const ollamaResults = await ollamaService.searchMedicines(searchQuery, {
+      limit: parseInt(limit),
+      minScore: parseFloat(min_score)
+    });
+    
+    if (!ollamaResults.success) {
+      // If Ollama fails, fallback to database search
+      console.log('Ollama search failed, falling back to database search');
+      const { medicineNames, fuse } = await getMedicineNamesCache();
+      
+      const fuseResults = fuse.search(searchQuery);
+      const fallbackResults = fuseResults
+        .slice(0, parseInt(limit))
+        .map(result => ({
+          ...result.item,
+          score: result.score,
+          source: 'database_fallback'
+        }));
+      
+      return res.json({
+        success: true,
+        data: fallbackResults,
+        source: 'database_fallback',
+        message: 'Ollama service unavailable, using database search',
+        pagination: {
+          total: fallbackResults.length,
+          limit: parseInt(limit),
+          hasMore: false
+        }
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: ollamaResults.data,
+      source: 'ollama',
+      pagination: {
+        total: ollamaResults.total,
+        limit: parseInt(limit),
+        hasMore: false
+      },
+      search: {
+        query: searchQuery,
+        min_score: parseFloat(min_score)
+      }
+    });
+  } catch (error) {
+    console.error('Ollama search error:', error);
+    
+    // Fallback to database search on error
+    try {
+      const { medicineNames, fuse } = await getMedicineNamesCache();
+      const searchQuery = req.query.q.trim();
+      
+      const fuseResults = fuse.search(searchQuery);
+      const fallbackResults = fuseResults
+        .slice(0, parseInt(req.query.limit) || 10)
+        .map(result => ({
+          ...result.item,
+          score: result.score,
+          source: 'database_fallback'
+        }));
+      
+      res.json({
+        success: true,
+        data: fallbackResults,
+        source: 'database_fallback',
+        message: 'Ollama service error, using database search',
+        pagination: {
+          total: fallbackResults.length,
+          limit: parseInt(req.query.limit) || 10,
+          hasMore: false
+        }
+      });
+    } catch (fallbackError) {
+      console.error('Fallback search error:', fallbackError);
+      res.status(500).json({
+        success: false,
+        message: 'Search service unavailable'
+      });
+    }
+  }
+});
+
+// @route   GET /api/medicine-names/ollama-status
+// @desc    Check Ollama service status
+// @access  Private
+router.get('/ollama-status', authenticateToken, async (req, res) => {
+  try {
+    const isAvailable = await ollamaService.isAvailable();
+    const models = await ollamaService.getModels();
+    
+    res.json({
+      success: true,
+      data: {
+        available: isAvailable,
+        models: models,
+        baseURL: process.env.OLLAMA_API_URL || 'http://localhost:11434',
+        model: process.env.OLLAMA_MODEL || 'llama3.2'
+      }
+    });
+  } catch (error) {
+    console.error('Ollama status check error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking Ollama status',
+      error: error.message
     });
   }
 });

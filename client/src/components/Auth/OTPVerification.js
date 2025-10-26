@@ -101,7 +101,7 @@ const OTPVerification = ({ phone, onVerified, onBack }) => {
       
       if (response.data.success) {
         toast.success('OTP verified successfully!');
-        onVerified(response.data.resetToken);
+        onVerified(response.data.resetToken, code);
       } else {
         setError(response.data.message || 'Invalid OTP');
         setAttempts(prev => prev + 1);

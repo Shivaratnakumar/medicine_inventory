@@ -17,7 +17,7 @@ import {
 import {
   Package,
   ShoppingCart,
-  DollarSign,
+  Receipt,
   AlertTriangle,
   TrendingUp,
   TrendingDown,
@@ -87,10 +87,10 @@ const Dashboard = () => {
     },
     {
       name: 'Total Revenue',
-      value: `$${dashboardData?.data?.data?.totalRevenue?.toLocaleString() || 0}`,
+      value: `₹${dashboardData?.data?.data?.totalRevenue?.toLocaleString() || 0}`,
       change: '+15%',
       changeType: 'positive',
-      icon: DollarSign,
+      icon: Receipt,
       color: 'bg-gradient-to-br from-teal-500 to-teal-600',
     },
     {
@@ -330,7 +330,7 @@ const Dashboard = () => {
                       <p className="text-sm text-medical-500">Order #{order.order_number}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-medical-900">${order.total_amount}</p>
+                      <p className="text-sm font-medium text-medical-900">₹{order.total_amount}</p>
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         order.status === 'delivered' ? 'bg-emerald-100 text-emerald-800' :
                         order.status === 'pending' ? 'bg-warning-100 text-warning-800' :

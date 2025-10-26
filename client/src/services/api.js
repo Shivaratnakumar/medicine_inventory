@@ -134,6 +134,24 @@ export const searchMedicineNames = async (query, options = {}) => {
   return await medicineNamesAPI.search(query, options);
 };
 
+// Ollama API functions
+export const ollamaAPI = {
+  search: async (query, options = {}) => {
+    const { limit = 10, min_score = 0.1 } = options;
+    const params = new URLSearchParams({
+      q: query,
+      limit: limit.toString(),
+      min_score: min_score.toString()
+    });
+    const response = await api.get(`/medicine-names/ollama-search?${params}`);
+    return response.data;
+  },
+  getStatus: async () => {
+    const response = await api.get('/medicine-names/ollama-status');
+    return response.data;
+  }
+};
+
 // Orders API - Using direct SQL endpoints to bypass Supabase issues
 export const ordersAPI = {
   getAll: async (params) => {
@@ -197,18 +215,29 @@ export const ordersAPI = {
 // Billing API
 export const billingAPI = {
   getAll: async (params) => {
-    try {
-      const response = await api.get('/billing', { params });
-      return response.data; // Return the actual data, not the axios response
-    } catch (error) {
-      console.error('Billing API Error:', error);
-      throw error;
-    }
+    const response = await api.get('/billing', { params });
+    return response.data;
   },
-  getById: (id) => api.get(`/billing/${id}`),
-  create: (data) => api.post('/billing', data),
-  update: (id, data) => api.put(`/billing/${id}`, data),
-  delete: (id) => api.delete(`/billing/${id}`),
+  getById: async (id) => {
+    const response = await api.get(`/billing/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/billing', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/billing/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/billing/${id}`);
+    return response.data;
+  },
+  getByOrderId: async (orderId) => {
+    const response = await api.get(`/orders/${orderId}/billing`);
+    return response.data;
+  },
   generateInvoice: (id) => api.get(`/billing/${id}/invoice`),
 };
 
@@ -218,11 +247,30 @@ export const storesAPI = {
     const response = await api.get('/stores');
     return response.data; // Return the actual data, not the axios response
   },
-  getById: (id) => api.get(`/stores/${id}`),
-  create: (data) => api.post('/stores', data),
-  update: (id, data) => api.put(`/stores/${id}`, data),
-  delete: (id) => api.delete(`/stores/${id}`),
-  getInventory: (id) => api.get(`/stores/${id}/inventory`),
+  getById: async (id) => {
+    const response = await api.get(`/stores/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/stores', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    console.log('Updating store with ID:', id, 'Data:', data);
+    const response = await api.put(`/stores/${id}`, data, {
+      timeout: 10000 // 10 second timeout
+    });
+    console.log('Store update response:', response.data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/stores/${id}`);
+    return response.data;
+  },
+  getInventory: async (id) => {
+    const response = await api.get(`/stores/${id}/inventory`);
+    return response.data;
+  },
 };
 
 // Analytics API
@@ -251,6 +299,7 @@ export const feedbackAPI = {
     const response = await api.get('/feedback', { params });
     return response.data; // Return the actual data, not the axios response
   },
+  getById: (id) => api.get(`/feedback/${id}`),
   create: (data) => api.post('/feedback', data),
   update: (id, data) => api.put(`/feedback/${id}`, data),
   delete: (id) => api.delete(`/feedback/${id}`),
@@ -271,6 +320,7 @@ export const supportAPI = {
 
 // Payment API
 export const paymentAPI = {
+  create: (data) => api.post('/payments', data),
   createPaymentIntent: (data) => api.post('/payments/create-intent', data),
   confirmPayment: (data) => api.post('/payments/confirm', data),
   getPaymentHistory: async (params) => {

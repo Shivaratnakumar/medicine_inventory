@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicine Autocomplete Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .results {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        .medicine-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .medicine-item:hover {
+            background-color: #e0e0e0;
+        }
+        .medicine-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .medicine-details {
+            font-size: 14px;
+            color: #666;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Medicine Autocomplete Test</h1>
+    <p>This page demonstrates the medicine search functionality. Try typing "D" in the search box below to see medicines that start with "D".</p>
+    
+    <div class="test-section">
+        <h2>Medicine Search Test</h2>
+        <input 
+            type="text" 
+            id="medicineSearch" 
+            class="search-input" 
+            placeholder="Type 'D' to search for medicines starting with D..."
+        />
+        <div id="results" class="results" style="display: none;">
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Instructions</h2>
+        <ol>
+            <li>Make sure the backend server is running on port 5000</li>
+            <li>Type "D" in the search box above</li>
+            <li>You should see medicines like "Duloxetine", "Diazepam", "Digoxin", etc.</li>
+            <li>Try typing "Dul" to see more specific results</li>
+        </ol>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        let searchTimeout;
+
+        document.getElementById('medicineSearch').addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            const resultsDiv = document.getElementById('results');
+            const resultsList = document.getElementById('resultsList');
+            
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            if (query.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            
+            // Debounce the search
+            searchTimeout = setTimeout(async () => {
+                try {
+                    console.log(`Searching for: "${query}"`);
+                    const response = await fetch(`${API_BASE_URL}/medicine-names/autocomplete?q=${encodeURIComponent(query)}&limit=10`);
+                    const data = await response.json();
+                    
+                    if (data.success && data.data.length > 0) {
+                        resultsList.innerHTML = data.data.map(medicine => `
+                            <div class="medicine-item">
+                                <div class="medicine-name">${medicine.name}</div>
+                                <div class="medicine-details">
+                                    ${medicine.generic_name ? `Generic: ${medicine.generic_name}` : ''}
+                                    ${medicine.brand_name ? ` | Brand: ${medicine.brand_name}` : ''}
+                                    ${medicine.manufacturer ? ` | Manufacturer: ${medicine.manufacturer}` : ''}
+                                </div>
+                            </div>
+                        `).join('');
+                        resultsDiv.style.display = 'block';
+                    } else {
+                        resultsList.innerHTML = '<div>No medicines found</div>';
+                        resultsDiv.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                    resultsList.innerHTML = '<div style="color: red;">Error searching medicines. Make sure the server is running.</div>';
+                    resultsDiv.style.display = 'block';
+                }
+            }, 300);
+        });
+    </script>
+</body>
+</html>

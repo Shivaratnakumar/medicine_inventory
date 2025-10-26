@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPI Payment Flow Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .qr-code {
+            width: 256px;
+            height: 256px;
+            background: black;
+            margin: 20px auto;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-pattern {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px;
+            width: 200px;
+            height: 200px;
+        }
+        .qr-cell {
+            background: white;
+        }
+        .qr-cell.black {
+            background: black;
+        }
+        .phonepe-logo {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+            border: 2px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .merchant-name {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .status.pending {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>UPI Payment Test</h2>
+        <p><strong>Order Total:</strong> ₹10.00</p>
+        <p><strong>Payment Method:</strong> UPI</p>
+        
+        <div class="qr-code">
+            <div class="qr-pattern" id="qrPattern"></div>
+            <div class="phonepe-logo">पे</div>
+        </div>
+        
+        <div class="merchant-name">
+            <strong>Santosh</strong><br>
+            <small>Scan with any UPI app</small>
+        </div>
+        
+        <div id="status" class="status pending" style="display: none;">
+            Waiting for payment...
+        </div>
+        
+        <div class="buttons">
+            <button class="btn btn-primary" onclick="openUPIApp()">Open UPI App</button>
+            <button class="btn btn-success" onclick="simulatePayment()">Simulate Payment</button>
+            <button class="btn btn-danger" onclick="cancelPayment()">Cancel Payment</button>
+        </div>
+        
+        <div id="result" style="display: none; margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 6px;">
+            <h3>Payment Result</h3>
+            <p id="resultText"></p>
+        </div>
+    </div>
+
+    <script>
+        // Generate QR code pattern
+        function generateQRPattern() {
+            const pattern = document.getElementById('qrPattern');
+            for (let i = 0; i < 64; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'qr-cell';
+                if (Math.random() > 0.5) {
+                    cell.classList.add('black');
+                }
+                pattern.appendChild(cell);
+            }
+        }
+        
+        // Open UPI app
+        function openUPIApp() {
+            const upiId = 'santosh@paytm';
+            const amount = 10;
+            const merchantName = 'Medicine Store';
+            const transactionId = `TXN${Date.now()}`;
+            
+            const upiUrl = `upi://pay?pa=${upiId}&pn=${merchantName}&am=${amount}&cu=INR&tn=Medicine Order&tr=${transactionId}`;
+            
+            // Try to open UPI app
+            window.open(upiUrl, '_blank');
+            
+            // Show scanning status
+            showStatus('pending', 'Waiting for payment...');
+        }
+        
+        // Simulate successful payment
+        function simulatePayment() {
+            showStatus('success', 'Payment successful!');
+            setTimeout(() => {
+                showResult('Payment completed successfully! Order will be processed shortly.');
+            }, 2000);
+        }
+        
+        // Cancel payment
+        function cancelPayment() {
+            showStatus('failed', 'Payment cancelled');
+            setTimeout(() => {
+                showResult('Payment was cancelled. Please try again or choose a different payment method.');
+            }, 1000);
+        }
+        
+        // Show status
+        function showStatus(type, message) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            status.style.display = 'block';
+        }
+        
+        // Show result
+        function showResult(message) {
+            const result = document.getElementById('result');
+            const resultText = document.getElementById('resultText');
+            resultText.textContent = message;
+            result.style.display = 'block';
+        }
+        
+        // Initialize
+        generateQRPattern();
+    </script>
+</body>
+</html>
+
+

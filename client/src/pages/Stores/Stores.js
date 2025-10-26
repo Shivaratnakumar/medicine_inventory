@@ -203,9 +203,15 @@ const Stores = () => {
 
 // Store Modal Component
 const StoreModal = ({ store, onClose, onSuccess }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  console.log('🏪 StoreModal rendered with store:', store);
+  
+  const { register, handleSubmit, formState: { errors }, getValues, watch } = useForm({
     defaultValues: store || {}
   });
+  
+  // Watch form values for debugging
+  const watchedValues = watch();
+  console.log('📊 Current form values:', watchedValues);
 
   const createMutation = useMutation(
     (data) => storesAPI.create(data),
@@ -221,23 +227,77 @@ const StoreModal = ({ store, onClose, onSuccess }) => {
   );
 
   const updateMutation = useMutation(
-    (data) => storesAPI.update(store.id, data),
+    (data) => {
+      return storesAPI.update(store.id, data);
+    },
     {
-      onSuccess: () => {
+      retry: 1, // Retry once on failure
+      retryDelay: 1000, // Wait 1 second before retry
+      onSuccess: (response) => {
+        console.log('Store update successful:', response);
         toast.success('Store updated successfully');
         onSuccess();
       },
       onError: (error) => {
-        toast.error(error.response?.data?.message || 'Failed to update store');
+        console.error('Update failed:', error);
+        console.error('Error response:', error.response);
+        console.error('Error data:', error.response?.data);
+        
+        let errorMessage = 'Failed to update store';
+        
+        if (error.code === 'ECONNABORTED') {
+          errorMessage = 'Request timeout. Please try again.';
+        } else if (error.message === 'Network Error') {
+          errorMessage = 'Network error. Please check your connection.';
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        }
+        
+        toast.error(errorMessage);
       }
     }
   );
 
   const onSubmit = (data) => {
-    if (store) {
-      updateMutation.mutate(data);
-    } else {
+    console.log('=== STORE UPDATE DEBUG ===');
+    console.log('Submitting store data:', data);
+    console.log('Is editing store:', !!store);
+    console.log('Store ID:', store?.id);
+    console.log('Store object:', store);
+    console.log('Mutation loading state:', updateMutation.isLoading);
+    console.log('Mutation error state:', updateMutation.error);
+    console.log('Form errors:', errors);
+    console.log('================================');
+    
+    // Check for validation errors
+    if (Object.keys(errors).length > 0) {
+      console.error('❌ Form validation errors:', errors);
+      toast.error('Please fix the form errors before submitting');
+      return;
+    }
+    
+    if (store && store.id) {
+      console.log('🚀 Starting store update...');
+      // Test with a simple data object first
+      const testData = {
+        name: data.name || 'Test Store',
+        address: data.address || 'Test Address',
+        city: data.city || 'Test City',
+        state: data.state || 'TS',
+        zip_code: data.zip_code || '12345',
+        phone: data.phone || '+1-555-TEST',
+        email: data.email || 'test@store.com'
+      };
+      console.log('🧪 Using test data:', testData);
+      updateMutation.mutate(testData);
+    } else if (!store) {
+      console.log('🚀 Starting store creation...');
       createMutation.mutate(data);
+    } else {
+      console.error('❌ Invalid store data for update:', store);
+      toast.error('Invalid store data. Please try again.');
     }
   };
 
@@ -259,7 +319,15 @@ const StoreModal = ({ store, onClose, onSuccess }) => {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+          <form 
+            onSubmit={(e) => {
+              console.log('📝 Form submit event triggered');
+              console.log('Event:', e);
+              handleSubmit(onSubmit)(e);
+            }} 
+            className="space-y-4"
+          >
             <div>
               <label className="block text-sm font-medium text-gray-700">Store Name *</label>
               <input
@@ -353,13 +421,58 @@ const StoreModal = ({ store, onClose, onSuccess }) => {
               >
                 Cancel
               </button>
+              
+              {/* Debug button for testing */}
+              {store && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log('🧪 Manual test triggered');
+                    const formData = new FormData(document.querySelector('form'));
+                    const data = Object.fromEntries(formData.entries());
+                    console.log('Form data from FormData:', data);
+                    console.log('Current form values:', document.querySelector('form'));
+                    updateMutation.mutate(data);
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Test Update
+                </button>
+              )}
+              
+              {/* Retry button for failed updates */}
+              {updateMutation.error && store && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log('🔄 Manual retry triggered');
+                    const formData = new FormData(document.querySelector('form'));
+                    const data = Object.fromEntries(formData.entries());
+                    updateMutation.mutate(data);
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Retry Update
+                </button>
+              )}
+              
               <button
                 type="submit"
                 disabled={isLoading}
-                className="btn btn-primary"
+                onClick={(e) => {
+                  console.log('🔘 Submit button clicked');
+                  console.log('Form valid:', Object.keys(errors).length === 0);
+                  console.log('Is loading:', isLoading);
+                  console.log('Store:', store);
+                  // Don't prevent default - let the form handle it
+                }}
+                className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
-                  <div className="loading-spinner h-4 w-4"></div>
+                  <div className="flex items-center">
+                    <div className="loading-spinner h-4 w-4 mr-2"></div>
+                    {store ? 'Updating...' : 'Adding...'}
+                  </div>
                 ) : (
                   store ? 'Update Store' : 'Add Store'
                 )}

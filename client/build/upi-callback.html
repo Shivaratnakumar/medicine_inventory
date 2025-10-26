@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPI Payment Callback</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .loading { color: #6b7280; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Processing UPI Payment...</h2>
+        <p id="status" class="loading">Please wait while we verify your payment...</p>
+        <div id="details" style="display: none; margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 4px; text-align: left;">
+            <p><strong>Transaction ID:</strong> <span id="txnId"></span></p>
+            <p><strong>Status:</strong> <span id="paymentStatus"></span></p>
+            <p><strong>Amount:</strong> <span id="amount"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const txnId = urlParams.get('txnid') || urlParams.get('tr');
+        const status = urlParams.get('status') || urlParams.get('txnStatus');
+        const amount = urlParams.get('amount') || urlParams.get('am');
+        const responseCode = urlParams.get('responseCode') || urlParams.get('code');
+        
+        console.log('UPI Callback received:', { txnId, status, amount, responseCode });
+        
+        // Determine payment status
+        let paymentStatus = 'pending';
+        let statusText = 'Processing...';
+        let statusClass = 'loading';
+        
+        if (status === 'SUCCESS' || responseCode === '00' || status === 'success') {
+            paymentStatus = 'completed';
+            statusText = 'Payment Successful!';
+            statusClass = 'success';
+        } else if (status === 'FAILED' || responseCode === '01' || status === 'failed') {
+            paymentStatus = 'failed';
+            statusText = 'Payment Failed';
+            statusClass = 'error';
+        }
+        
+        // Update UI
+        document.getElementById('status').textContent = statusText;
+        document.getElementById('status').className = statusClass;
+        
+        if (txnId) {
+            document.getElementById('txnId').textContent = txnId;
+            document.getElementById('paymentStatus').textContent = statusText;
+            document.getElementById('amount').textContent = amount ? `₹${amount}` : 'N/A';
+            document.getElementById('details').style.display = 'block';
+        }
+        
+        // Store callback data for the main app to pick up
+        const callbackData = {
+            transactionId: txnId,
+            status: paymentStatus,
+            amount: amount,
+            responseCode: responseCode,
+            timestamp: Date.now()
+        };
+        
+        localStorage.setItem('upiCallbackData', JSON.stringify(callbackData));
+        
+        // For testing purposes, also set manual confirmation
+        if (paymentStatus === 'completed' && txnId) {
+            localStorage.setItem('manualUPIConfirmation', txnId);
+        }
+        
+        console.log('Callback data stored:', callbackData);
+        
+        // Show success message and redirect back
+        if (paymentStatus === 'completed') {
+            setTimeout(() => {
+                // Try to redirect back to the main app
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'UPI_PAYMENT_COMPLETE',
+                        data: callbackData
+                    }, '*');
+                    window.close();
+                } else {
+                    // Fallback: redirect to main page
+                    window.location.href = '/';
+                }
+            }, 3000);
+        } else if (paymentStatus === 'failed') {
+            setTimeout(() => {
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'UPI_PAYMENT_FAILED',
+                        data: callbackData
+                    }, '*');
+                    window.close();
+                } else {
+                    window.location.href = '/';
+                }
+            }, 3000);
+        }
+        
+        // Listen for messages from parent window
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'CLOSE_UPI_CALLBACK') {
+                window.close();
+            }
+        });
+    </script>
+</body>
+</html>

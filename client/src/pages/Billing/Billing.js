@@ -8,7 +8,6 @@ import {
   Eye,
   Download,
   Receipt,
-  DollarSign,
   Calendar,
   User,
   CreditCard,
@@ -136,7 +135,7 @@ const Billing = () => {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="p-3 rounded-md bg-green-500">
-                  <DollarSign className="h-6 w-6 text-white" />
+                  <Receipt className="h-6 w-6 text-white" />
                 </div>
               </div>
               <div className="ml-5 w-0 flex-1">
@@ -145,7 +144,7 @@ const Billing = () => {
                     Total Revenue
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    ${(billingRecords && Array.isArray(billingRecords) 
+                    ₹{(billingRecords && Array.isArray(billingRecords) 
                       ? billingRecords.reduce((sum, record) => 
                           record.payment_status === 'paid' ? sum + parseFloat(record.total_amount || 0) : sum, 0
                         )
@@ -278,8 +277,8 @@ const Billing = () => {
                         {new Date(record.created_at).toLocaleDateString()}
                       </div>
                       <div className="flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        ${record.total_amount}
+                        <Receipt className="h-4 w-4 mr-1" />
+                        ₹{record.total_amount}
                       </div>
                       {record.due_date && (
                         <div className="flex items-center">
@@ -435,7 +434,7 @@ const CreateInvoiceModal = ({ orders, onClose, onSuccess }) => {
                 <option value="">Select an order (optional)</option>
                 {orders && Array.isArray(orders) && orders.map((order) => (
                   <option key={order.id} value={order.id}>
-                    {order.order_number} - {order.customer_name} - ${order.total_amount}
+                    {order.order_number} - {order.customer_name} - ₹{order.total_amount}
                   </option>
                 ))}
               </select>
@@ -454,7 +453,7 @@ const CreateInvoiceModal = ({ orders, onClose, onSuccess }) => {
                   </div>
                   <div>
                     <span className="text-gray-500">Total:</span>
-                    <span className="ml-2 text-gray-900">${selectedOrder.total_amount}</span>
+                    <span className="ml-2 text-gray-900">₹{selectedOrder.total_amount}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Items:</span>
@@ -628,7 +627,7 @@ const BillingDetailsModal = ({ billing, onClose }) => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Total Amount</label>
-                <p className="text-sm text-gray-900">${billing.total_amount}</p>
+                <p className="text-sm text-gray-900">₹{billing.total_amount}</p>
               </div>
             </div>
 
@@ -637,19 +636,19 @@ const BillingDetailsModal = ({ billing, onClose }) => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Subtotal:</span>
-                  <span className="text-sm text-gray-900">${billing.subtotal}</span>
+                  <span className="text-sm text-gray-900">₹{billing.subtotal}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Tax:</span>
-                  <span className="text-sm text-gray-900">${billing.tax_amount || 0}</span>
+                  <span className="text-sm text-gray-900">₹{billing.tax_amount || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Discount:</span>
-                  <span className="text-sm text-gray-900">-${billing.discount_amount || 0}</span>
+                  <span className="text-sm text-gray-900">-₹{billing.discount_amount || 0}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                   <span className="text-sm font-medium text-gray-900">Total:</span>
-                  <span className="text-sm font-medium text-gray-900">${billing.total_amount}</span>
+                  <span className="text-sm font-medium text-gray-900">₹{billing.total_amount}</span>
                 </div>
               </div>
             </div>
