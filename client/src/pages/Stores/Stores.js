@@ -10,16 +10,19 @@ import {
   Phone,
   Mail,
   Users,
-  X
+  X,
+  Eye
 } from 'lucide-react';
 import { storesAPI } from '../../services/api';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
+import BranchDetailsModal from '../../components/Modals/BranchDetailsModal';
 import toast from 'react-hot-toast';
 
 const Stores = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStore, setEditingStore] = useState(null);
+  const [selectedStore, setSelectedStore] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -111,7 +114,7 @@ const Stores = () => {
       {/* Stores Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {(stores && Array.isArray(stores)) ? stores.map((store) => (
-          <div key={store.id} className="card hover:shadow-lg transition-shadow">
+          <div key={store.id} className="card hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedStore(store)} title="Click to view store details">
             <div className="card-content">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -145,14 +148,32 @@ const Stores = () => {
                 </div>
                 <div className="flex space-x-1 ml-2">
                   <button
-                    onClick={() => setEditingStore(store)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedStore(store);
+                    }}
                     className="p-1 text-gray-400 hover:text-blue-600"
+                    title="View Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingStore(store);
+                    }}
+                    className="p-1 text-gray-400 hover:text-blue-600"
+                    title="Edit Store"
                   >
                     <Edit className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(store.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(store.id);
+                    }}
                     className="p-1 text-gray-400 hover:text-red-600"
+                    title="Delete Store"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -195,6 +216,14 @@ const Stores = () => {
             setShowAddModal(false);
             setEditingStore(null);
           }}
+        />
+      )}
+
+      {/* Branch Details Modal */}
+      {selectedStore && (
+        <BranchDetailsModal
+          store={selectedStore}
+          onClose={() => setSelectedStore(null)}
         />
       )}
     </div>

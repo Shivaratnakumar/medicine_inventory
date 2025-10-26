@@ -248,7 +248,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       .from('stores')
       .select(`
         *,
-        users(first_name, last_name)
+        users(first_name, last_name, email, phone)
       `)
       .eq('id', id)
       .eq('is_active', true)
@@ -278,6 +278,224 @@ router.get('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error fetching store'
+    });
+  }
+});
+
+// @route   GET /api/stores/:id/inventory
+// @desc    Get store inventory summary
+// @access  Private
+router.get('/:id/inventory', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get inventory count for this store using store_inventory table
+    const { data: inventory, error } = await supabaseAdmin
+      .from('store_inventory')
+      .select(`
+        id,
+        quantity,
+        minimum_stock_level,
+        maximum_stock_level,
+        last_restocked,
+        medicines(
+          id,
+          name,
+          sku,
+          price,
+          expiry_date,
+          categories(name)
+        )
+      `)
+      .eq('store_id', id);
+
+    if (error) {
+      console.error('Error fetching store inventory:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error fetching store inventory'
+      });
+    }
+
+    // Calculate summary statistics
+    const totalItems = inventory?.length || 0;
+    const totalStock = inventory?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+    const categories = [...new Set(inventory?.map(item => item.medicines?.categories?.name).filter(Boolean))] || [];
+
+    res.json({
+      success: true,
+      data: {
+        total_items: totalItems,
+        total_stock: totalStock,
+        categories: categories,
+        inventory: inventory || []
+      }
+    });
+  } catch (error) {
+    console.error('Store inventory fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching store inventory'
+    });
+  }
+});
+
+// @route   GET /api/stores/:id/staff
+// @desc    Get store staff members
+// @access  Private
+router.get('/:id/staff', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get store manager first
+    const { data: store, error: storeError } = await supabaseAdmin
+      .from('stores')
+      .select(`
+        manager_id,
+        users!stores_manager_id_fkey(
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          role,
+          is_active,
+          created_at
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (storeError) {
+      console.error('Error fetching store:', storeError);
+      return res.status(500).json({
+        success: false,
+        message: 'Error fetching store'
+      });
+    }
+
+    // Get all users associated with this store (if there's a store_id field in users)
+    // For now, we'll just return the manager
+    const staff = [];
+    if (store.users) {
+      staff.push({
+        ...store.users,
+        position: 'Manager'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: staff
+    });
+  } catch (error) {
+    console.error('Store staff fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching store staff'
+    });
+  }
+});
+
+// @route   GET /api/stores/:id/orders
+// @desc    Get recent orders for this store
+// @access  Private
+router.get('/:id/orders', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { limit = 10 } = req.query;
+
+    const { data: orders, error } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        customer_name,
+        customer_email,
+        total_amount,
+        status,
+        created_at,
+        order_items(
+          id,
+          quantity,
+          unit_price,
+          medicines(name, sku)
+        )
+      `)
+      .eq('store_id', id)
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit));
+
+    if (error) {
+      console.error('Error fetching store orders:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error fetching store orders'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: orders || []
+    });
+  } catch (error) {
+    console.error('Store orders fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching store orders'
+    });
+  }
+});
+
+// @route   GET /api/stores/:id/billing
+// @desc    Get billing history for this store
+// @access  Private
+router.get('/:id/billing', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { limit = 20 } = req.query;
+
+    const { data: billing, error } = await supabaseAdmin
+      .from('billing')
+      .select(`
+        id,
+        invoice_number,
+        customer_name,
+        customer_email,
+        subtotal,
+        tax_amount,
+        discount_amount,
+        total_amount,
+        payment_status,
+        due_date,
+        created_at,
+        orders(
+          id,
+          order_number,
+          store_id
+        )
+      `)
+      .eq('orders.store_id', id)
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit));
+
+    if (error) {
+      console.error('Error fetching store billing:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error fetching store billing'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: billing || []
+    });
+  } catch (error) {
+    console.error('Store billing fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching store billing'
     });
   }
 });

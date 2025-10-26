@@ -42,22 +42,102 @@ export const StoreProvider = ({ children }) => {
       const mockStores = [
         {
           id: '1',
+          name: 'Metro Medical Center',
+          address: '123 Healthcare Boulevard, Mumbai',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          phone: '+91-22-1234-5678',
+          email: 'metro@medical.com',
+          is_active: true
+        },
+        {
+          id: '2',
+          name: 'City Health Pharmacy',
+          address: '456 Wellness Street, Delhi',
+          city: 'Delhi',
+          state: 'Delhi',
+          phone: '+91-11-2345-6789',
+          email: 'city@healthpharmacy.com',
+          is_active: true
+        },
+        {
+          id: '3',
+          name: 'Prime Care Medical Store',
+          address: '789 Medical Plaza, Bangalore',
+          city: 'Bangalore',
+          state: 'Karnataka',
+          phone: '+91-80-3456-7890',
+          email: 'prime@caremedical.com',
+          is_active: true
+        },
+        {
+          id: '4',
+          name: 'Wellness Plus Pharmacy',
+          address: '321 Health Avenue, Chennai',
+          city: 'Chennai',
+          state: 'Tamil Nadu',
+          phone: '+91-44-4567-8901',
+          email: 'wellness@pluspharmacy.com',
+          is_active: true
+        },
+        {
+          id: '5',
+          name: 'Family Health Store',
+          address: '654 Care Center, Kolkata',
+          city: 'Kolkata',
+          state: 'West Bengal',
+          phone: '+91-33-5678-9012',
+          email: 'family@healthstore.com',
+          is_active: true
+        },
+        {
+          id: '6',
+          name: 'Community Medical Hub',
+          address: '987 Service Road, Hyderabad',
+          city: 'Hyderabad',
+          state: 'Telangana',
+          phone: '+91-40-6789-0123',
+          email: 'community@medicalhub.com',
+          is_active: true
+        },
+        {
+          id: '7',
+          name: 'Downtown Pharmacy',
+          address: '456 Broadway Street, New York',
+          city: 'New York',
+          state: 'NY',
+          phone: '+1-555-0201',
+          email: 'downtown@pharmacy.com',
+          is_active: true
+        },
+        {
+          id: '8',
+          name: 'Westside Medical Store',
+          address: '789 West Avenue, Los Angeles',
+          city: 'Los Angeles',
+          state: 'CA',
+          phone: '+1-555-0301',
+          email: 'westside@pharmacy.com',
+          is_active: true
+        },
+        {
+          id: '9',
+          name: 'Central Health Pharmacy',
+          address: '321 Central Plaza, Chicago',
+          city: 'Chicago',
+          state: 'IL',
+          phone: '+1-555-0401',
+          email: 'central@pharmacy.com',
+          is_active: true
+        },
+        {
+          id: '10',
           name: 'Main Medical Store',
           address: '123 Main St, City',
           city: 'City',
           state: 'State',
           phone: '+1-555-0123',
           email: 'main@medical.com',
-          is_active: true
-        },
-        {
-          id: '2',
-          name: 'Branch Medical Store',
-          address: '456 Oak Ave, City',
-          city: 'City',
-          state: 'State',
-          phone: '+1-555-0124',
-          email: 'branch@medical.com',
           is_active: true
         }
       ];

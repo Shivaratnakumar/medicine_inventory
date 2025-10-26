@@ -99,12 +99,12 @@ export const medicineNamesAPI = {
     const response = await api.get('/medicine-names', { params });
     return response.data;
   },
-  getAutocomplete: async (query, limit = 10) => {
+  getAutocomplete: async (query, limit = 20) => { // Increased from 10 to 20
     const response = await api.get(`/medicine-names/autocomplete?q=${query}&limit=${limit}`);
     return response.data;
   },
   search: async (query, options = {}) => {
-    const { type = 'all', min_score = 0.1, limit = 20, offset = 0 } = options;
+    const { type = 'all', min_score = 0.1, limit = 40, offset = 0 } = options; // Increased from 20 to 40
     const params = new URLSearchParams({
       q: query,
       type,
@@ -126,7 +126,7 @@ export const medicineNamesAPI = {
 };
 
 // Convenience functions for autocomplete
-export const getAutocompleteSuggestions = async (query, limit = 10) => {
+export const getAutocompleteSuggestions = async (query, limit = 20) => { // Increased from 10 to 20
   return await medicineNamesAPI.getAutocomplete(query, limit);
 };
 
@@ -269,6 +269,18 @@ export const storesAPI = {
   },
   getInventory: async (id) => {
     const response = await api.get(`/stores/${id}/inventory`);
+    return response.data;
+  },
+  getStaff: async (id) => {
+    const response = await api.get(`/stores/${id}/staff`);
+    return response.data;
+  },
+  getOrders: async (id, params = {}) => {
+    const response = await api.get(`/stores/${id}/orders`, { params });
+    return response.data;
+  },
+  getBilling: async (id, params = {}) => {
+    const response = await api.get(`/stores/${id}/billing`, { params });
     return response.data;
   },
 };

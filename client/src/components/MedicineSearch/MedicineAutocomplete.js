@@ -7,8 +7,8 @@ const MedicineAutocomplete = ({
   className = "",
   showGeneric = true,
   showBrand = true,
-  maxSuggestions = 10,
-  minQueryLength = 2
+  maxSuggestions = 20, // Increased from 10 to 20
+  minQueryLength = 1 // Reduced from 2 to 1 for better responsiveness
 }) => {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -53,7 +53,7 @@ const MedicineAutocomplete = ({
         try {
           // Use database search directly for better performance
           // Skip Ollama API to reduce latency
-          const response = await getAutocompleteSuggestions(searchQuery, maxSuggestions);
+          const response = await getAutocompleteSuggestions(searchQuery, maxSuggestions * 2); // Get more results
           const results = response.data || [];
           
           // Cache the results

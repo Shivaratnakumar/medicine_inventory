@@ -434,7 +434,7 @@ const MedicineModal = ({ medicine, onClose, onSuccess }) => {
                   className="mt-1"
                   showGeneric={true}
                   showBrand={true}
-                  maxSuggestions={10}
+                  maxSuggestions={20}
                 />
                 {errors.name && (
                   <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>

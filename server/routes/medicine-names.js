@@ -22,17 +22,113 @@ const initializeFuse = (medicineNames) => {
       { name: 'brand_name', weight: 0.2 },
       { name: 'common_names', weight: 0.1 }
     ],
-    threshold: 0.3, // More strict matching for better results
+    threshold: 0.4, // More lenient matching for better coverage
     includeScore: true,
     includeMatches: true,
-    minMatchCharLength: 2,
+    minMatchCharLength: 1, // Allow single character matches
     shouldSort: true,
-    findAllMatches: false, // Disable for better performance
+    findAllMatches: true, // Enable to find all matches for better results
     ignoreLocation: true,
-    useExtendedSearch: false // Disable for better performance
+    useExtendedSearch: true, // Enable for better partial matching
+    distance: 100, // Increase distance for more flexible matching
+    location: 0,
+    maxPatternLength: 32
   };
   
   return new Fuse(medicineNames, fuseOptions);
+};
+
+// Enhanced search function that combines multiple strategies
+const enhancedSearch = (medicineNames, searchQuery, limit) => {
+  const results = new Map();
+  
+  // Strategy 1: Exact matches (highest priority)
+  medicineNames.forEach(medicine => {
+    const name = medicine.name.toLowerCase();
+    const generic = (medicine.generic_name || '').toLowerCase();
+    const brand = (medicine.brand_name || '').toLowerCase();
+    const commonNames = (medicine.common_names || []).map(n => n.toLowerCase());
+    
+    if (name.includes(searchQuery.toLowerCase()) || 
+        generic.includes(searchQuery.toLowerCase()) ||
+        brand.includes(searchQuery.toLowerCase()) ||
+        commonNames.some(n => n.includes(searchQuery.toLowerCase()))) {
+      results.set(medicine.id, {
+        ...medicine,
+        score: 0.1, // High score for exact matches
+        matchType: 'exact'
+      });
+    }
+  });
+  
+  // Strategy 2: Fuzzy search for partial matches
+  const fuseOptions = {
+    keys: [
+      { name: 'name', weight: 0.4 },
+      { name: 'generic_name', weight: 0.3 },
+      { name: 'brand_name', weight: 0.2 },
+      { name: 'common_names', weight: 0.1 }
+    ],
+    threshold: 0.6,
+    includeScore: true,
+    includeMatches: true,
+    minMatchCharLength: 1,
+    shouldSort: true,
+    findAllMatches: true,
+    ignoreLocation: true,
+    useExtendedSearch: true,
+    distance: 100
+  };
+  
+  const fuse = new Fuse(medicineNames, fuseOptions);
+  const fuzzyResults = fuse.search(searchQuery);
+  
+  fuzzyResults.forEach(result => {
+    if (!results.has(result.item.id)) {
+      results.set(result.item.id, {
+        ...result.item,
+        score: result.score + 0.2, // Lower score for fuzzy matches
+        matchType: 'fuzzy'
+      });
+    }
+  });
+  
+  // Strategy 3: Word-based matching for better coverage
+  const searchWords = searchQuery.toLowerCase().split(/\s+/);
+  medicineNames.forEach(medicine => {
+    if (!results.has(medicine.id)) {
+      const name = medicine.name.toLowerCase();
+      const generic = (medicine.generic_name || '').toLowerCase();
+      const brand = (medicine.brand_name || '').toLowerCase();
+      const commonNames = (medicine.common_names || []).map(n => n.toLowerCase());
+      
+      let wordMatches = 0;
+      searchWords.forEach(word => {
+        if (name.includes(word) || generic.includes(word) || 
+            brand.includes(word) || commonNames.some(n => n.includes(word))) {
+          wordMatches++;
+        }
+      });
+      
+      if (wordMatches > 0) {
+        results.set(medicine.id, {
+          ...medicine,
+          score: 0.5 + (wordMatches / searchWords.length) * 0.3, // Score based on word match ratio
+          matchType: 'word'
+        });
+      }
+    }
+  });
+  
+  // Convert to array and sort by score
+  const sortedResults = Array.from(results.values())
+    .sort((a, b) => {
+      if (a.score !== b.score) return a.score - b.score;
+      return b.popularity_score - a.popularity_score; // Secondary sort by popularity
+    })
+    .slice(0, limit);
+  
+  return sortedResults;
 };
 
 // Load medicine names from database
@@ -157,31 +253,19 @@ router.get('/autocomplete', authenticateToken, async (req, res) => {
     const { medicineNames, fuse } = await getMedicineNamesCache();
     const searchQuery = q.trim();
     
-    // Use Fuse.js for fuzzy search with autocomplete - optimized for speed
-    const fuseOptions = {
-      ...fuse.options,
-      threshold: 0.4, // Slightly more lenient for autocomplete
-      limit: parseInt(limit),
-      findAllMatches: false, // Disable for better performance
-      useExtendedSearch: false // Disable for better performance
-    };
-    
-    const autocompleteFuse = new Fuse(medicineNames, fuseOptions);
-    const results = autocompleteFuse.search(searchQuery);
+    // Use enhanced search for better results
+    const results = enhancedSearch(medicineNames, searchQuery, parseInt(limit));
     
     // Format results for autocomplete
     const suggestions = results.map(result => ({
-      id: result.item.id,
-      name: result.item.name,
-      generic_name: result.item.generic_name,
-      brand_name: result.item.brand_name,
-      common_names: result.item.common_names,
+      id: result.id,
+      name: result.name,
+      generic_name: result.generic_name,
+      brand_name: result.brand_name,
+      common_names: result.common_names,
       score: result.score,
-      highlight: result.matches ? result.matches.map(match => ({
-        key: match.key,
-        value: match.value,
-        indices: match.indices
-      })) : []
+      matchType: result.matchType,
+      highlight: [] // Simplified for now
     }));
     
     res.json({
@@ -222,31 +306,8 @@ router.get('/search', authenticateToken, async (req, res) => {
     const { medicineNames, fuse } = await getMedicineNamesCache();
     const searchQuery = q.trim();
     
-    // Configure Fuse.js based on search type
-    let searchKeys = [
-      { name: 'name', weight: 0.4 },
-      { name: 'generic_name', weight: 0.3 },
-      { name: 'brand_name', weight: 0.2 },
-      { name: 'common_names', weight: 0.1 }
-    ];
-    
-    if (type !== 'all') {
-      searchKeys = searchKeys.filter(key => 
-        (type === 'generic' && key.name === 'generic_name') ||
-        (type === 'brand' && key.name === 'brand_name') ||
-        (type === 'common' && key.name === 'common_names') ||
-        key.name === 'name' // Always include name
-      );
-    }
-    
-    const searchFuse = new Fuse(medicineNames, {
-      ...fuse.options,
-      keys: searchKeys,
-      threshold: parseFloat(min_score),
-      limit: parseInt(limit)
-    });
-    
-    const results = searchFuse.search(searchQuery);
+    // Use enhanced search for better results
+    const results = enhancedSearch(medicineNames, searchQuery, parseInt(limit));
     
     // Apply pagination
     const startIndex = parseInt(offset);
@@ -255,11 +316,7 @@ router.get('/search', authenticateToken, async (req, res) => {
     
     res.json({
       success: true,
-      data: paginatedResults.map(result => ({
-        ...result.item,
-        score: result.score,
-        matches: result.matches
-      })),
+      data: paginatedResults,
       pagination: {
         total: results.length,
         limit: parseInt(limit),

@@ -33,13 +33,13 @@ const Layout = ({ children }) => {
     { name: 'Medicines', href: '/medicines', icon: Pill },
     ...(user?.role === 'admin' ? [{ name: 'Expiry Tracker', href: '/expiry-tracker', icon: Calendar }] : []),
     { name: 'Orders', href: '/orders', icon: ShoppingCart },
-    { name: 'Supply Hub', href: '/supply-hub', icon: Truck },
     { name: 'Billing', href: '/billing', icon: Receipt },
     { name: 'Payment', href: '/payment', icon: CreditCard },
   ];
 
   const managementNavigation = [
     { name: 'Branches', href: '/stores', icon: Store },
+    { name: 'Supply Hub', href: '/supply-hub', icon: Truck },
     ...(user?.role === 'admin' ? [{ name: 'Alerts', href: '/alerts', icon: AlertTriangle }] : []),
     { name: 'Notifications', href: '/notifications', icon: Bell },
     { name: 'Support', href: '/support', icon: HeadphonesIcon },
@@ -216,10 +216,22 @@ const SidebarContent = ({ mainNavigation, managementNavigation, isActive }) => {
           {mainNavigation.map(renderNavigationItem)}
           
           {/* Separator */}
-          <div className="my-4 mx-3 border-t border-medical-200"></div>
+          <div className="my-4 mx-3 border-t-2 border-medical-200"></div>
           
           {/* Management & Support Group */}
-          {managementNavigation.map(renderNavigationItem)}
+          {managementNavigation.map((item, index) => {
+            const renderedItem = renderNavigationItem(item);
+            // Add separator after Supply Hub (index 1 in managementNavigation)
+            if (index === 1) {
+              return (
+                <React.Fragment key={item.name}>
+                  {renderedItem}
+                  <div className="my-3 mx-3 border-t-2 border-medical-200"></div>
+                </React.Fragment>
+              );
+            }
+            return renderedItem;
+          })}
         </nav>
       </div>
     </div>
